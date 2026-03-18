@@ -203,8 +203,8 @@
     .leg-row:hover { background: #f0f7f2; }
     .leg-row.dimmed { opacity: 0.4; }
     .map-legend.hidden-legend { display: none; }
-    /* Multiply blend removes white background from the ethnicity image overlay */
-    .eth-img-overlay { mix-blend-mode: multiply; }
+    /* Canvas ethnicity layer – mix-blend-mode set inline via JS */
+    .eth-canvas { z-index: 350 !important; }
     .leg-swatch {
       width: 16px; height: 16px;
       border-radius: 3px;
@@ -673,9 +673,78 @@ const ETHNICITIES = {
   'Krio':    { color: '#c0392b', label: 'Krio'    },
 };
 
-// Ethnicity image overlay bounds — the reference map image (ethnic_map.png) is fitted
-// over Sierra Leone's geographic extent with slight padding to align correctly.
-const ETH_IMG_BOUNDS = [[6.6, -13.6], [10.25, -9.95]];
+// ─── Custom canvas layer: draws ethnic_map.png clipped to Sierra Leone's exact border ───
+// Uses HTML5 canvas compositing (destination-in) so nothing bleeds outside the country.
+const EthnicityImageLayer = L.Layer.extend({
+  onAdd(map) {
+    this._map = map;
+    const pane = map.getPanes().overlayPane;
+    this._canvas = L.DomUtil.create('canvas', 'eth-canvas', pane);
+    this._canvas.style.cssText = 'position:absolute;pointer-events:none;mix-blend-mode:multiply;';
+
+    this._img = new Image();
+    this._img.onload = () => this._reset();
+    this._img.src = 'ethnic_map.png';
+
+    map.on('viewreset', this._reset, this);
+    map.on('zoom move', this._draw, this);
+    this._reset();
+  },
+  onRemove(map) {
+    L.DomUtil.remove(this._canvas);
+    map.off('viewreset', this._reset, this);
+    map.off('zoom move', this._draw, this);
+  },
+  _reset() {
+    const map = this._map;
+    const topLeft = map.containerPointToLayerPoint([0, 0]);
+    L.DomUtil.setPosition(this._canvas, topLeft);
+    const size = map.getSize();
+    this._canvas.width  = size.x;
+    this._canvas.height = size.y;
+    this._draw();
+  },
+  _draw() {
+    const map = this._map;
+    const canvas = this._canvas;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!this._img.complete || !allFeatures?.length) return;
+
+    // Convert lat/lng → canvas pixel (canvas is pinned to container top-left)
+    const offset = map.containerPointToLayerPoint([0, 0]);
+    const toPx = ll => {
+      const lp = map.latLngToLayerPoint(ll);
+      return [lp.x - offset.x, lp.y - offset.y];
+    };
+
+    // 1. Draw the reference ethnicity image over its calibrated bounds
+    const nb = L.latLngBounds([[6.6, -13.6], [10.25, -9.95]]);
+    const [nwx, nwy] = toPx(nb.getNorthWest());
+    const [sex, sey] = toPx(nb.getSouthEast());
+    ctx.globalAlpha = 0.82;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(this._img, nwx, nwy, sex - nwx, sey - nwy);
+
+    // 2. Clip to Sierra Leone: destination-in keeps image pixels only inside the mask
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.beginPath();
+    allFeatures.forEach(f => {
+      const geom = f.geometry;
+      (geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates).forEach(poly => {
+        poly.forEach(ring => {
+          ring.forEach((c, i) => {
+            const [x, y] = toPx(L.latLng(c[1], c[0]));
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          });
+          ctx.closePath();
+        });
+      });
+    });
+    ctx.fill('evenodd');
+  }
+});
 
 let ethnicityMode = false;
 let ethOverlayLayer = null;
@@ -896,14 +965,8 @@ document.getElementById('ethnicity-btn').addEventListener('click', () => {
     // Fade chiefdom fills so the overlay reads clearly
     if (geoLayer) geoLayer.eachLayer(l => l.setStyle(featureStyle(l.feature)));
 
-    // Place the reference ethnicity map image directly as an overlay.
-    // mix-blend-mode:multiply (set via CSS) makes the white background disappear.
-    ethOverlayLayer = L.imageOverlay('ethnic_map.png', ETH_IMG_BOUNDS, {
-      opacity: 0.72,
-      className: 'eth-img-overlay',
-      interactive: false,
-      zIndex: 200
-    }).addTo(map);
+    // Canvas layer: draws ethnic_map.png clipped exactly to Sierra Leone's borders.
+    ethOverlayLayer = new EthnicityImageLayer().addTo(map);
 
     // Bring chiefdom borders to the front so they show above the overlay
     if (geoLayer) geoLayer.bringToFront();
