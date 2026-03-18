@@ -671,47 +671,50 @@ const ETHNICITIES = {
   'Krio':    { color: '#c0392b', label: 'Krio'    },
 };
 
-// Primary ethnic group per district (approximate, based on historic ethnolinguistic map)
-const DISTRICT_ETHNICITY = {
-  'Bombali':      'Temne',
-  'Kambia':       'Temsu',   // Temne + Susu mix — handled below
-  'PortLoko':     'Temne',
-  'Tonkolili':    'Temne',
-  'Koinadugu':    'Limba',
-  'Kono':         'Kono',
-  'Kailahun':     'Mende',
-  'Kenema':       'Mende',
-  'Bo':           'Mende',
-  'Pujehun':      'Mende',
-  'Moyamba':      'Mende',
-  'Bonthe':       'Sherbro',
-  'WesternUrban': 'Krio',
-  'WesternRural': 'Krio',
-};
-
-// Kambia is mostly Temne but the far-north chiefdoms are Susu.
-// Split at chiefdom level using known Susu chiefdom names in Kambia.
-const SUSU_CHIEFDOMS = new Set([
-  'Bramaia','Mambolo','Tonko Limba','Samu'
-]);
-
-function getEthnicity(props) {
-  const district = (props.NAME_2 || '').trim();
-  if (district === 'Kambia') {
-    const chiefdom = chiefdomName(props);
-    return SUSU_CHIEFDOMS.has(chiefdom) ? 'Susu' : 'Temne';
-  }
-  // Koinadugu: northeastern chiefdoms are Koranko, others are Limba
-  if (district === 'Koinadugu') {
-    const korankoChiefdoms = new Set([
-      'Diang','Neya','Nieni','Sengbe','Sulima'
-    ]);
-    return korankoChiefdoms.has(chiefdomName(props)) ? 'Koranko' : 'Limba';
-  }
-  return DISTRICT_ETHNICITY[district] || null;
-}
+// Approximate ethnolinguistic regions as independent polygons (do NOT follow chiefdom lines).
+// Coordinates: [longitude, latitude] (GeoJSON order).
+// Source: adapted from historic ethnolinguistic map of Sierra Leone.
+const ETHNICITY_GEOJSON = { "type": "FeatureCollection", "features": [
+  { "type":"Feature", "properties":{"ethnicity":"Krio"},
+    "geometry":{"type":"Polygon","coordinates":[[
+      [-13.31,8.25],[-13.0,8.2],[-12.85,8.35],[-13.0,8.65],[-13.25,8.65],[-13.31,8.5],[-13.31,8.25]
+    ]]}},
+  { "type":"Feature", "properties":{"ethnicity":"Susu"},
+    "geometry":{"type":"Polygon","coordinates":[[
+      [-13.31,9.1],[-12.8,8.95],[-12.45,9.15],[-12.3,9.6],[-12.6,10.0],[-13.31,10.0],[-13.31,9.1]
+    ]]}},
+  { "type":"Feature", "properties":{"ethnicity":"Temne"},
+    "geometry":{"type":"Polygon","coordinates":[[
+      [-13.31,8.5],[-13.25,8.65],[-13.0,8.65],[-12.85,8.35],[-13.0,8.2],[-13.31,8.25],
+      [-13.31,7.95],[-12.5,7.88],[-11.55,7.95],[-11.5,8.55],[-11.7,8.85],[-12.05,9.05],
+      [-12.45,9.15],[-12.8,8.95],[-13.31,9.1],[-13.31,8.5]
+    ]]}},
+  { "type":"Feature", "properties":{"ethnicity":"Limba"},
+    "geometry":{"type":"Polygon","coordinates":[[
+      [-12.45,9.15],[-12.05,9.05],[-11.7,8.85],[-11.5,8.55],[-11.4,8.9],[-11.35,9.4],
+      [-11.5,9.85],[-12.3,9.6],[-12.45,9.15]
+    ]]}},
+  { "type":"Feature", "properties":{"ethnicity":"Koranko"},
+    "geometry":{"type":"Polygon","coordinates":[[
+      [-11.5,8.55],[-11.05,8.45],[-10.27,8.7],[-10.27,10.0],[-11.5,9.85],[-11.35,9.4],[-11.4,8.9],[-11.5,8.55]
+    ]]}},
+  { "type":"Feature", "properties":{"ethnicity":"Kono"},
+    "geometry":{"type":"Polygon","coordinates":[[
+      [-11.55,7.95],[-11.05,7.88],[-10.27,8.0],[-10.27,8.7],[-11.05,8.45],[-11.5,8.55],[-11.55,7.95]
+    ]]}},
+  { "type":"Feature", "properties":{"ethnicity":"Sherbro"},
+    "geometry":{"type":"Polygon","coordinates":[[
+      [-13.31,6.89],[-12.1,6.89],[-12.05,7.3],[-12.4,7.72],[-12.5,7.88],[-13.31,7.95],[-13.31,6.89]
+    ]]}},
+  { "type":"Feature", "properties":{"ethnicity":"Mende"},
+    "geometry":{"type":"Polygon","coordinates":[[
+      [-12.1,6.89],[-10.27,6.89],[-10.27,8.0],[-11.05,7.88],[-11.55,7.95],[-12.5,7.88],
+      [-12.4,7.72],[-12.05,7.3],[-12.1,6.89]
+    ]]}}
+]};
 
 let ethnicityMode = false;
+let ethOverlayLayer = null;
 
 // GADM district names have no spaces – format them for display
 function fmtDistrict(raw) {
@@ -757,18 +760,12 @@ let activeProvince = null;
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 function featureStyle(feature, highlighted = false) {
-  let col;
-  if (ethnicityMode) {
-    const eth = getEthnicity(feature.properties);
-    col = eth && ETHNICITIES[eth] ? ETHNICITIES[eth].color : '#aaa';
-  } else {
-    const prov = getProvince(feature.properties);
-    col = (PROVINCES[prov] || PROVINCES['Northern']).color;
-  }
+  const prov = getProvince(feature.properties);
+  const col  = ethnicityMode ? '#888' : (PROVINCES[prov] || PROVINCES['Northern']).color;
   return {
     fillColor:   col,
-    fillOpacity: highlighted ? 0.88 : 0.60,
-    color:       highlighted ? '#fff' : 'rgba(255,255,255,0.65)',
+    fillOpacity: ethnicityMode ? 0.08 : (highlighted ? 0.88 : 0.52),
+    color:       'rgba(255,255,255,0.65)',
     weight:      highlighted ? 2.8 : 1.3,
     dashArray:   '',
   };
@@ -782,17 +779,12 @@ function onMouseOver(e) {
 
   const p    = layer.feature.properties;
   const prov = getProvince(p);
-  const provCol = (PROVINCES[prov] || PROVINCES['Northern']).color;
-  const eth  = getEthnicity(p);
-  const ethCol  = eth && ETHNICITIES[eth] ? ETHNICITIES[eth].color : '#aaa';
-  const col  = ethnicityMode ? ethCol : provCol;
-  const subLabel = ethnicityMode
-    ? (eth ? `<span style="color:${col}">${eth}</span> people` : 'Unknown ethnicity')
-    : `${districtName(p) !== '—' ? districtName(p)+' District · ' : ''}<span style="color:${col}">${PROVINCES[prov]?.label || prov}</span>`;
+  const col  = (PROVINCES[prov] || PROVINCES['Northern']).color;
 
   layer.bindTooltip(
     `<div>${chiefdomName(p)} Chiefdom</div>` +
-    `<div class="tip-sub">${subLabel}</div>`,
+    `<div class="tip-sub">${districtName(p) !== '—' ? districtName(p)+' District · ' : ''}` +
+    `<span style="color:${col}">${PROVINCES[prov]?.label || prov}</span></div>`,
     { className: 'chiefdom-tip', sticky: true, direction: 'top', offset: [0, -4] }
   ).openTooltip(e.latlng);
 }
@@ -845,7 +837,6 @@ function onClick(e) {
           <span class="pl">Province</span>
           <span><span class="pop-prov-dot" style="background:${col}"></span>${PROVINCES[prov]?.label || prov}</span>
         </div>
-        ${(() => { const eth = getEthnicity(p); const ec = eth && ETHNICITIES[eth] ? ETHNICITIES[eth].color : '#aaa'; return eth ? `<div class="pop-row"><span class="pl">Ethnicity</span><span><span class="pop-prov-dot" style="background:${ec}"></span>${eth}</span></div>` : ''; })()}
         <div class="pop-row"><span class="pl">Country</span><span>Sierra Leone 🇸🇱</span></div>
        </div>`
     ).openOn(map);
@@ -937,16 +928,40 @@ document.getElementById('ethnicity-btn').addEventListener('click', () => {
   ethnicityMode = !ethnicityMode;
   document.getElementById('ethnicity-btn').classList.toggle('active', ethnicityMode);
 
-  // Redraw all chiefdom polygons
-  if (geoLayer) {
-    geoLayer.eachLayer(layer => layer.setStyle(featureStyle(layer.feature)));
-  }
-  // Swap legends
   if (ethnicityMode) {
+    // Fade chiefdom fills so the overlay reads clearly
+    if (geoLayer) geoLayer.eachLayer(l => l.setStyle(featureStyle(l.feature)));
+
+    // Build and add the independent ethnic polygon overlay
+    ethOverlayLayer = L.geoJSON(ETHNICITY_GEOJSON, {
+      style: f => {
+        const col = ETHNICITIES[f.properties.ethnicity]?.color || '#aaa';
+        return { fillColor: col, fillOpacity: 0.48, color: 'rgba(0,0,0,0.18)', weight: 1.5 };
+      },
+      onEachFeature: (f, layer) => {
+        const eth = f.properties.ethnicity;
+        const col = ETHNICITIES[eth]?.color || '#aaa';
+        layer.bindTooltip(
+          `<div><span style="color:${col}">●</span> <strong>${eth}</strong> territory</div>`,
+          { className: 'chiefdom-tip', sticky: true, direction: 'top', offset: [0, -4] }
+        );
+      }
+    }).addTo(map);
+
+    // Bring chiefdom borders to the front so they show above the overlay
+    if (geoLayer) geoLayer.bringToFront();
+
+    // Swap legend
     document.querySelector('.map-legend')?.classList.add('hidden-legend');
     buildEthnicityLegend();
+
   } else {
-    if (ethLegendCtrl) { ethLegendCtrl.remove(); ethLegendCtrl = null; }
+    // Remove overlay
+    if (ethOverlayLayer) { ethOverlayLayer.remove(); ethOverlayLayer = null; }
+    if (ethLegendCtrl)   { ethLegendCtrl.remove();   ethLegendCtrl = null;   }
+
+    // Restore province colours
+    if (geoLayer) geoLayer.eachLayer(l => l.setStyle(featureStyle(l.feature)));
     document.querySelector('.map-legend')?.classList.remove('hidden-legend');
     if (activeProvince) applyProvinceFilter(activeProvince, false);
   }
