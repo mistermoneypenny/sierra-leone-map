@@ -674,59 +674,53 @@ const ETHNICITIES = {
 };
 
 // ─── Custom canvas layer: draws ethnic_map.png clipped to Sierra Leone's exact border ───
-// Uses HTML5 canvas compositing (destination-in) so nothing bleeds outside the country.
+// Canvas lives directly in the map container (not inside a moving pane) so that
+// latLngToContainerPoint coordinates map 1-to-1 onto canvas pixels with no transforms.
 const EthnicityImageLayer = L.Layer.extend({
   onAdd(map) {
     this._map = map;
-    const pane = map.getPanes().overlayPane;
-    this._canvas = L.DomUtil.create('canvas', 'eth-canvas', pane);
-    this._canvas.style.cssText = 'position:absolute;pointer-events:none;mix-blend-mode:multiply;';
+    const c = this._canvas = document.createElement('canvas');
+    // z-index 250 sits above tiles (200) but below the GeoJSON overlay pane (400)
+    c.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;' +
+                      'mix-blend-mode:multiply;z-index:250;';
+    map.getContainer().appendChild(c);
 
     this._img = new Image();
-    this._img.onload = () => this._reset();
+    this._img.onload = () => this._draw();
     this._img.src = 'ethnic_map.png';
 
-    map.on('viewreset', this._reset, this);
-    map.on('zoom move', this._draw, this);
-    this._reset();
+    map.on('move zoom moveend zoomend resize', this._draw, this);
+    this._draw();
   },
   onRemove(map) {
-    L.DomUtil.remove(this._canvas);
-    map.off('viewreset', this._reset, this);
-    map.off('zoom move', this._draw, this);
-  },
-  _reset() {
-    const map = this._map;
-    const topLeft = map.containerPointToLayerPoint([0, 0]);
-    L.DomUtil.setPosition(this._canvas, topLeft);
-    const size = map.getSize();
-    this._canvas.width  = size.x;
-    this._canvas.height = size.y;
-    this._draw();
+    this._canvas.remove();
+    map.off('move zoom moveend zoomend resize', this._draw, this);
   },
   _draw() {
     const map = this._map;
-    const canvas = this._canvas;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const c   = this._canvas;
+    const sz  = map.getSize();
+    c.width   = sz.x;
+    c.height  = sz.y;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, sz.x, sz.y);
     if (!this._img.complete || !allFeatures?.length) return;
 
-    // Convert lat/lng → canvas pixel (canvas is pinned to container top-left)
-    const offset = map.containerPointToLayerPoint([0, 0]);
+    // latLngToContainerPoint → pixel coords relative to map container top-left = canvas coords
     const toPx = ll => {
-      const lp = map.latLngToLayerPoint(ll);
-      return [lp.x - offset.x, lp.y - offset.y];
+      const pt = map.latLngToContainerPoint(L.latLng(ll[0], ll[1]));
+      return [pt.x, pt.y];
     };
 
-    // 1. Draw the reference ethnicity image over its calibrated bounds
+    // 1. Draw the reference ethnicity image at its calibrated geographic bounds
     const nb = L.latLngBounds([[6.6, -13.6], [10.25, -9.95]]);
-    const [nwx, nwy] = toPx(nb.getNorthWest());
-    const [sex, sey] = toPx(nb.getSouthEast());
+    const [nwx, nwy] = toPx([nb.getNorth(), nb.getWest()]);
+    const [sex, sey] = toPx([nb.getSouth(), nb.getEast()]);
     ctx.globalAlpha = 0.82;
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(this._img, nwx, nwy, sex - nwx, sey - nwy);
 
-    // 2. Clip to Sierra Leone: destination-in keeps image pixels only inside the mask
+    // 2. destination-in: erase everything outside Sierra Leone's chiefdom polygons
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'destination-in';
     ctx.beginPath();
@@ -734,8 +728,8 @@ const EthnicityImageLayer = L.Layer.extend({
       const geom = f.geometry;
       (geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates).forEach(poly => {
         poly.forEach(ring => {
-          ring.forEach((c, i) => {
-            const [x, y] = toPx(L.latLng(c[1], c[0]));
+          ring.forEach((coord, i) => {
+            const [x, y] = toPx([coord[1], coord[0]]);
             i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
           });
           ctx.closePath();
