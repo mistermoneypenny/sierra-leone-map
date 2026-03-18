@@ -675,52 +675,56 @@ const ETHNICITIES = {
 // Coordinates: [longitude, latitude] (GeoJSON order).
 // Source: adapted from historic ethnolinguistic map of Sierra Leone.
 const ETHNICITY_GEOJSON = { "type": "FeatureCollection", "features": [
+  // Krio – tiny Freetown peninsula
   { "type":"Feature", "properties":{"ethnicity":"Krio"},
     "geometry":{"type":"Polygon","coordinates":[[
       [-13.31,8.25],[-13.0,8.2],[-12.85,8.35],[-13.0,8.65],[-13.25,8.65],[-13.31,8.5],[-13.31,8.25]
     ]]}},
-  // Susu – NW coastal strip (stays within SL northern border)
+  // Susu – NW coastal corner. Anchor: Kambla (~9.12°N,-12.92°W) sits inside this region.
   { "type":"Feature", "properties":{"ethnicity":"Susu"},
     "geometry":{"type":"Polygon","coordinates":[[
-      [-13.31,9.1],[-12.8,8.95],[-12.45,9.15],[-12.3,9.6],[-12.6,9.85],[-13.1,9.9],[-13.31,9.85],[-13.31,9.1]
+      [-13.31,9.0],[-12.7,8.9],[-12.3,9.1],[-12.1,9.55],[-12.5,9.85],[-13.1,9.9],[-13.31,9.85],[-13.31,9.0]
     ]]}},
-  // Temne – large central-west
+  // Temne – large central-west. Anchors: Makeni (8.89°N,-12.04°W), Port Loko (8.77°N,-12.87°W), Lunsar (8.68°N,-12.53°W).
+  // Southern boundary raised to ~8.0-8.25°N to hand off Moyamba area to Sherbro.
   { "type":"Feature", "properties":{"ethnicity":"Temne"},
     "geometry":{"type":"Polygon","coordinates":[[
-      [-13.31,8.5],[-13.25,8.65],[-13.0,8.65],[-12.85,8.35],[-13.0,8.2],[-13.31,8.25],
-      [-13.31,7.95],[-12.5,7.88],[-11.55,7.95],[-11.5,8.55],[-11.7,8.85],[-12.05,9.05],
-      [-12.45,9.15],[-12.8,8.95],[-13.31,9.1],[-13.31,8.5]
+      [-13.31,8.65],[-13.0,8.65],[-12.85,8.35],[-13.0,8.2],[-13.31,8.25],
+      [-13.31,8.0],[-13.0,8.15],[-12.4,8.25],[-12.0,8.0],[-11.55,8.0],
+      [-11.5,8.55],[-11.7,8.85],[-12.1,9.05],[-12.3,9.1],[-12.7,8.9],
+      [-13.31,9.0],[-13.31,8.65]
     ]]}},
-  // Limba – north-center
+  // Limba – north-center. Anchor: Kabala (9.59°N,-11.56°W) sits inside.
   { "type":"Feature", "properties":{"ethnicity":"Limba"},
     "geometry":{"type":"Polygon","coordinates":[[
-      [-12.45,9.15],[-12.05,9.05],[-11.7,8.85],[-11.5,8.55],
+      [-12.3,9.1],[-12.1,9.05],[-11.7,8.85],[-11.5,8.55],
       [-11.4,8.9],[-11.35,9.4],[-11.5,9.75],[-11.7,9.82],
-      [-12.3,9.6],[-12.45,9.15]
+      [-12.1,9.55],[-12.3,9.1]
     ]]}},
-  // Koranko – NE (eastern edge hugs SL border ~-10.65°W, not the bbox -10.27°W)
+  // Koranko – NE. Eastern edge ~-10.65°W (within SL border).
   { "type":"Feature", "properties":{"ethnicity":"Koranko"},
     "geometry":{"type":"Polygon","coordinates":[[
       [-11.5,8.55],[-11.05,8.45],[-10.65,8.6],[-10.65,9.5],[-10.7,9.65],
       [-11.5,9.75],[-11.35,9.4],[-11.4,8.9],[-11.5,8.55]
     ]]}},
-  // Kono – east-center (eastern edge ~-10.5°W, within SL)
+  // Kono – east-center. Anchor: Kainkordu (8.47°N,-11.07°W) sits inside.
   { "type":"Feature", "properties":{"ethnicity":"Kono"},
     "geometry":{"type":"Polygon","coordinates":[[
-      [-11.55,7.95],[-11.05,7.88],[-10.5,7.85],[-10.5,8.55],[-10.65,8.6],
-      [-11.05,8.45],[-11.5,8.55],[-11.55,7.95]
+      [-11.55,8.0],[-11.05,7.88],[-10.5,7.85],[-10.5,8.55],[-10.65,8.6],
+      [-11.05,8.45],[-11.5,8.55],[-11.55,8.0]
     ]]}},
-  // Sherbro – SW coast and islands
+  // Sherbro – LARGE SW area. Anchors: Moyamba (8.16°N,-12.43°W) and Bonthe (7.53°N,-12.50°W) both inside.
+  // Northern boundary sweeps up to ~8.25°N to capture Moyamba.
   { "type":"Feature", "properties":{"ethnicity":"Sherbro"},
     "geometry":{"type":"Polygon","coordinates":[[
-      [-13.31,6.89],[-12.1,6.89],[-12.05,7.3],[-12.4,7.72],[-12.5,7.88],
-      [-13.31,7.95],[-13.31,6.89]
+      [-13.31,6.89],[-12.1,6.89],[-11.8,7.5],[-12.0,8.0],[-12.4,8.25],
+      [-13.0,8.15],[-13.31,8.0],[-13.31,6.89]
     ]]}},
-  // Mende – south + east (eastern edge traces actual SL border: -10.9→-10.5→-10.65°W)
+  // Mende – south + east. Anchors: Bo (7.96°N,-11.74°W) and Pujehun (7.36°N,-11.72°W) both inside.
   { "type":"Feature", "properties":{"ethnicity":"Mende"},
     "geometry":{"type":"Polygon","coordinates":[[
       [-12.1,6.89],[-10.9,6.89],[-10.65,7.1],[-10.5,7.5],[-10.5,7.85],
-      [-11.05,7.88],[-11.55,7.95],[-12.5,7.88],[-12.4,7.72],[-12.05,7.3],[-12.1,6.89]
+      [-11.05,7.88],[-11.55,8.0],[-12.0,8.0],[-11.8,7.5],[-12.1,6.89]
     ]]}}
 ]};
 
