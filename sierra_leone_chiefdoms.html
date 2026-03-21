@@ -728,8 +728,14 @@ const EthnicityImageLayer = L.Layer.extend({
       return [lp.x - origin.x, lp.y - origin.y];
     };
 
-    // 1. Draw the reference ethnicity image stretched to Sierra Leone's geographic bounds
-    const nb = L.latLngBounds([[6.6, -13.6], [10.25, -9.95]]);
+    // 1. Draw the reference ethnicity image stretched to its calibrated geographic extent.
+    // Bounds derived from city anchor points in the 745x858 image:
+    //   Freetown (8.49°N, -13.23°W) at pixel (~108, ~458)
+    //   Segbwema (7.98°N, -10.95°W) at pixel (~519, ~544)
+    //   Bo       (7.96°N, -11.74°W) at pixel (~372, ~554) — verified
+    // Full image (incl. white padding + legend) spans NW(11.21,-13.83) → SE(6.12,-9.70).
+    // The legend and padding fall outside SL's chiefdom polygons and are clipped by destination-in.
+    const nb = L.latLngBounds([[6.12, -13.83], [11.21, -9.70]]);
     const [nwx, nwy] = toPx(nb.getNorthWest());
     const [sex, sey] = toPx(nb.getSouthEast());
     ctx.globalAlpha = 0.82;
