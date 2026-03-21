@@ -729,13 +729,14 @@ const EthnicityImageLayer = L.Layer.extend({
     };
 
     // 1. Draw the reference ethnicity image stretched to its calibrated geographic extent.
-    // Bounds derived from city anchor points in the 745x858 image:
-    //   Freetown (8.49°N, -13.23°W) at pixel (~108, ~458)
-    //   Segbwema (7.98°N, -10.95°W) at pixel (~519, ~544)
-    //   Bo       (7.96°N, -11.74°W) at pixel (~372, ~554) — verified
-    // Full image (incl. white padding + legend) spans NW(11.21,-13.83) → SE(6.12,-9.70).
-    // The legend and padding fall outside SL's chiefdom polygons and are clipped by destination-in.
-    const nb = L.latLngBounds([[6.12, -13.83], [11.21, -9.70]]);
+    // Pixel-sampled calibration on the 745×858 image:
+    //   Bo     (7.96°N,-11.74°W) → pixel (373,554) ✓ olive confirmed
+    //   Makeni (8.88°N,-12.04°W) → pixel (320,387) ✓ orange confirmed
+    //   Kabala (9.58°N,-11.86°W) → pixel (352,261) ✓ pink confirmed
+    //   Scale: 177px/°lon, 182px/°lat  (verified across all three anchors)
+    //   → NW corner = 7.96 + 554/182 = 11.004°N,  -11.74 - 373/177 = -13.848°W
+    //   → SE corner = 11.004 - 858/182 = 6.290°N,  -13.848 + 745/177 = -9.638°W
+    const nb = L.latLngBounds([[6.29, -13.848], [11.004, -9.638]]);
     const [nwx, nwy] = toPx(nb.getNorthWest());
     const [sex, sey] = toPx(nb.getSouthEast());
     ctx.globalAlpha = 0.82;
