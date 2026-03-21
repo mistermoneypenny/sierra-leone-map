@@ -316,6 +316,29 @@
     #ethnicity-btn:hover { background: #eaf5ee; }
     #ethnicity-btn.active { background: #2c7a4b; color: #fff; }
 
+    /* ─── Mining Concessions toggle button ─── */
+    #mining-btn {
+      position: absolute;
+      bottom: 112px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      border: 1.5px solid #7b5c00;
+      color: #7b5c00;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      z-index: 1000;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      transition: background 0.15s, color 0.15s;
+    }
+    #mining-btn:hover { background: #fdf6e3; }
+    #mining-btn.active { background: #7b5c00; color: #fff; }
+    #mining-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
     /* ─── Reset button ─── */
     #reset-btn {
       position: absolute;
@@ -572,6 +595,7 @@
     <div class="stat-row"><span>Chiefdoms</span><span class="num" id="total-count">—</span></div>
   </div>
 
+  <button id="mining-btn" title="Toggle mining concessions layer">⛏ Mining Concessions</button>
   <button id="ethnicity-btn" title="Toggle ethnic group layer">🗺 Ethnicity Layer</button>
   <button id="reset-btn" title="Show all provinces">✕ Clear filter</button>
 
@@ -1286,6 +1310,133 @@ document.getElementById('cp-submit').addEventListener('click', () => {
   document.getElementById('cp-name').value    = '';
   document.getElementById('cp-coords').value  = '';
   panel.classList.remove('open');
+});
+
+// ─── Mining Concessions Layer ─────────────────────────────────────────────────
+const MINING_TYPES = {
+  artisanal:  { label: 'Artisanal Mining',          color: '#2980b9' },
+  exploration: { label: 'Exploration License',       color: '#e67e22' },
+  largescale:  { label: 'Large Scale / Mining Lease',color: '#c0392b' },
+  smallscale:  { label: 'Small Scale',               color: '#8e44ad' },
+};
+
+function miningTypeKey(typeStr) {
+  if (!typeStr) return 'exploration';
+  const t = typeStr.toLowerCase();
+  if (t.includes('artisanal')) return 'artisanal';
+  if (t.includes('large') || t.includes('lease')) return 'largescale';
+  if (t.includes('small')) return 'smallscale';
+  return 'exploration';
+}
+
+let miningGeoLayer   = null;
+let miningLegendCtrl = null;
+let miningDataLoaded = false;
+let miningMode       = false;
+
+function buildMiningLegend() {
+  const ctrl = L.control({ position: 'bottomleft' });
+  ctrl.onAdd = () => {
+    const div = L.DomUtil.create('div', 'map-legend');
+    div.innerHTML = `
+      <div class="legend-title" style="margin-bottom:4px">Mining Concessions</div>
+      <div style="font-size:10px;color:#888;margin-bottom:8px">National Minerals Agency · Sierra Leone</div>
+      ${Object.values(MINING_TYPES).map(v =>
+        `<div class="legend-item" style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${v.color};opacity:0.85;flex-shrink:0;border:1px solid rgba(0,0,0,0.2)"></span>
+          <span style="font-size:12px;color:#333">${v.label}</span>
+        </div>`
+      ).join('')}
+    `;
+    return div;
+  };
+  ctrl.addTo(map);
+  miningLegendCtrl = ctrl;
+}
+
+async function loadMiningData() {
+  const btn = document.getElementById('mining-btn');
+  btn.textContent = '⏳ Loading…';
+  btn.disabled = true;
+
+  const url = 'https://services8.arcgis.com/PCeCk32MjqBcahrl/arcgis/rest/services/GoSL_AllActiveLicences/FeatureServer/0/query'
+    + '?where=1%3D1&outFields=Name,owner,type,status,start_date,expiry_dat,assets&f=geojson&resultRecordCount=2000';
+
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    // Create pane between chiefdom overlay (400) and ethnicity (350) — sits above both
+    if (!map.getPane('miningPane')) {
+      map.createPane('miningPane');
+      map.getPane('miningPane').style.zIndex = 420;
+      map.getPane('miningPane').style.pointerEvents = 'auto';
+    }
+
+    miningGeoLayer = L.geoJSON(data, {
+      pane: 'miningPane',
+      style: feat => {
+        const mt = MINING_TYPES[miningTypeKey(feat.properties.type)];
+        return { color: mt.color, weight: 1.2, fillColor: mt.color, fillOpacity: 0.38, opacity: 0.9 };
+      },
+      onEachFeature: (feat, layer) => {
+        const p = feat.properties;
+        const mt = MINING_TYPES[miningTypeKey(p.type)];
+        const fmt = d => d ? d.toString().split('T')[0] : '—';
+        layer.bindPopup(`
+          <div style="font-family:sans-serif;min-width:230px;max-width:280px">
+            <div style="font-weight:700;font-size:14px;margin-bottom:5px;color:#1b3a6e">${p.Name || '—'}</div>
+            <div style="display:inline-block;background:${mt.color};color:#fff;border-radius:10px;
+                        padding:2px 9px;font-size:11px;font-weight:600;margin-bottom:8px">${mt.label}</div>
+            <table style="width:100%;font-size:12px;border-collapse:collapse">
+              <tr><td style="color:#666;padding:2px 4px;white-space:nowrap">Owner</td>
+                  <td style="padding:2px 4px;font-weight:600">${p.owner || '—'}</td></tr>
+              <tr><td style="color:#666;padding:2px 4px">Minerals</td>
+                  <td style="padding:2px 4px">${p.assets || '—'}</td></tr>
+              <tr><td style="color:#666;padding:2px 4px">Start</td>
+                  <td style="padding:2px 4px">${fmt(p.start_date)}</td></tr>
+              <tr><td style="color:#666;padding:2px 4px">Expiry</td>
+                  <td style="padding:2px 4px">${fmt(p.expiry_dat)}</td></tr>
+              <tr><td style="color:#666;padding:2px 4px">Status</td>
+                  <td style="padding:2px 4px">${p.status || '—'}</td></tr>
+            </table>
+          </div>
+        `, { maxWidth: 300 });
+
+        layer.on('mouseover', () => layer.setStyle({ weight: 2.5, fillOpacity: 0.65 }));
+        layer.on('mouseout',  () => miningGeoLayer.resetStyle(layer));
+      },
+    });
+
+    miningDataLoaded = true;
+    btn.textContent = '⛏ Mining Concessions';
+    btn.disabled = false;
+    return true;
+  } catch (err) {
+    console.error('Mining data load failed:', err);
+    btn.textContent = '⛏ Mining Concessions';
+    btn.disabled = false;
+    return false;
+  }
+}
+
+document.getElementById('mining-btn').addEventListener('click', async () => {
+  miningMode = !miningMode;
+  const btn = document.getElementById('mining-btn');
+  btn.classList.toggle('active', miningMode);
+
+  if (miningMode) {
+    if (!miningDataLoaded) {
+      const ok = await loadMiningData();
+      if (!ok) { miningMode = false; btn.classList.remove('active'); return; }
+    }
+    miningGeoLayer.addTo(map);
+    if (geoLayer) geoLayer.bringToFront();
+    buildMiningLegend();
+  } else {
+    if (miningGeoLayer) miningGeoLayer.remove();
+    if (miningLegendCtrl) { miningLegendCtrl.remove(); miningLegendCtrl = null; }
+  }
 });
 
 // ─── Concession label style (injected) ───────────────────────────────────────
