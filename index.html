@@ -6,6 +6,7 @@
   <title>Sierra Leone – Paramount Chiefdoms</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2006,15 +2007,53 @@ document.getElementById('geology-btn').addEventListener('click', () => {
         map.createPane('geologyPane');
         map.getPane('geologyPane').style.zIndex = 290;
       }
-      geologyLayer = L.tileLayer(
-        'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
+      geologyLayer = L.vectorGrid.protobuf(
+        'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.pbf',
         {
-          pane:        'geologyPane',
-          opacity:     0.65,
+          pane: 'geologyPane',
+          rendererFactory: L.canvas.tile,
+          maxZoom: 16,
           attribution: '© Macrostrat / UW–Madison',
-          maxZoom:     19,
+          vectorTileLayerStyles: {
+            units: p => ({
+              fill:        true,
+              fillColor:   p.color || '#cccccc',
+              fillOpacity: 0.60,
+              stroke:      false,
+              weight:      0,
+            }),
+            lines: () => ({
+              stroke:  true,
+              color:   '#666',
+              weight:  0.6,
+              opacity: 0.5,
+              fill:    false,
+            }),
+          },
+          interactive: true,
+          getFeatureId: f => f.properties.map_id,
         }
-      );
+      ).on('click', function(e) {
+        const p = e.layer.properties;
+        if (!p) return;
+        const age  = [p.b_age, p.t_age].filter(Boolean).map(a => (+a).toFixed(0) + ' Ma').join(' – ') || '—';
+        const name = p.name || p.strat_name || '—';
+        L.popup({ maxWidth: 300 })
+          .setLatLng(e.latlng)
+          .setContent(`
+            <div class="pop-header" style="background:linear-gradient(135deg,${p.color || '#888'}cc,${p.color || '#888'})">
+              <h3>🪨 ${name}</h3>
+              <div class="pop-sub">Geological Unit</div>
+            </div>
+            <div class="pop-body">
+              ${p.age     ? `<div class="pop-row"><span>Age</span><span class="pl">${p.age}</span></div>` : ''}
+              <div class="pop-row"><span>Time range</span><span class="pl">${age}</span></div>
+              ${p.lith    ? `<div class="pop-row"><span>Lithology</span><span class="pl">${p.lith}</span></div>` : ''}
+              ${p.descrip ? `<div class="pop-row"><span>Description</span><span class="pl">${p.descrip}</span></div>` : ''}
+            </div>
+          `)
+          .openOn(map);
+      });
     }
     geologyLayer.addTo(map);
     if (geoLayer) geoLayer.bringToFront();
