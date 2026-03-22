@@ -202,6 +202,9 @@
     }
     .leg-row:hover { background: #f0f7f2; }
     .leg-row.dimmed { opacity: 0.4; }
+    .mining-type-row { cursor: pointer; border-radius: 4px; padding: 3px 4px; transition: opacity 0.15s, background 0.15s; user-select: none; }
+    .mining-type-row:hover { background: #f0f4ff; }
+    .mining-type-row.dimmed { opacity: 0.35; }
     .map-legend.hidden-legend { display: none; }
     /* Canvas ethnicity layer – mix-blend-mode set inline via JS */
     .eth-canvas { z-index: 350 !important; }
@@ -1504,10 +1507,11 @@ function miningTypeKey(typeStr) {
   return 'exploration';
 }
 
-let miningGeoLayer   = null;
-let miningLegendCtrl = null;
-let miningDataLoaded = false;
-let miningMode       = false;
+let miningTypeLayers  = {};   // key → L.geoJSON layer, one per MINING_TYPES key
+let miningTypeVisible = { artisanal: true, exploration: true, largescale: true, smallscale: true };
+let miningLegendCtrl  = null;
+let miningDataLoaded  = false;
+let miningMode        = false;
 
 function buildMiningLegend() {
   const ctrl = L.control({ position: 'bottomleft' });
@@ -1516,13 +1520,31 @@ function buildMiningLegend() {
     div.innerHTML = `
       <div class="legend-title" style="margin-bottom:4px">Mining Concessions</div>
       <div style="font-size:10px;color:#888;margin-bottom:8px">National Minerals Agency · Sierra Leone</div>
-      ${Object.values(MINING_TYPES).map(v =>
-        `<div class="legend-item" style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${v.color};opacity:0.85;flex-shrink:0;border:1px solid rgba(0,0,0,0.2)"></span>
+      ${Object.entries(MINING_TYPES).map(([key, v]) =>
+        `<div class="mining-type-row ${miningTypeVisible[key] ? '' : 'dimmed'}"
+              data-key="${key}"
+              style="display:flex;align-items:center;gap:8px;margin-bottom:4px"
+              title="Click to show/hide">
+          <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${v.color};flex-shrink:0;border:1px solid rgba(0,0,0,0.2)"></span>
           <span style="font-size:12px;color:#333">${v.label}</span>
         </div>`
       ).join('')}
     `;
+    // Wire up per-type toggle clicks
+    div.querySelectorAll('.mining-type-row').forEach(row => {
+      L.DomEvent.on(row, 'click', () => {
+        const key = row.dataset.key;
+        miningTypeVisible[key] = !miningTypeVisible[key];
+        row.classList.toggle('dimmed', !miningTypeVisible[key]);
+        if (miningTypeVisible[key]) {
+          miningTypeLayers[key]?.addTo(map);
+          if (geoLayer) geoLayer.bringToFront();
+        } else {
+          miningTypeLayers[key]?.remove();
+        }
+      });
+    });
+    L.DomEvent.disableClickPropagation(div);
     return div;
   };
   ctrl.addTo(map);
@@ -1548,40 +1570,47 @@ async function loadMiningData() {
       map.getPane('miningPane').style.pointerEvents = 'auto';
     }
 
-    miningGeoLayer = L.geoJSON(data, {
-      pane: 'miningPane',
-      style: feat => {
-        const mt = MINING_TYPES[miningTypeKey(feat.properties.type)];
-        return { color: mt.color, weight: 1.2, fillColor: mt.color, fillOpacity: 0.38, opacity: 0.9 };
-      },
-      onEachFeature: (feat, layer) => {
-        const p = feat.properties;
-        const mt = MINING_TYPES[miningTypeKey(p.type)];
-        const fmt = d => d ? d.toString().split('T')[0] : '—';
-        layer.bindPopup(`
-          <div style="font-family:sans-serif;min-width:230px;max-width:280px">
-            <div style="font-weight:700;font-size:14px;margin-bottom:5px;color:#1b3a6e">${p.Name || '—'}</div>
-            <div style="display:inline-block;background:${mt.color};color:#fff;border-radius:10px;
-                        padding:2px 9px;font-size:11px;font-weight:600;margin-bottom:8px">${mt.label}</div>
-            <table style="width:100%;font-size:12px;border-collapse:collapse">
-              <tr><td style="color:#666;padding:2px 4px;white-space:nowrap">Owner</td>
-                  <td style="padding:2px 4px;font-weight:600">${p.owner || '—'}</td></tr>
-              <tr><td style="color:#666;padding:2px 4px">Minerals</td>
-                  <td style="padding:2px 4px">${p.assets || '—'}</td></tr>
-              <tr><td style="color:#666;padding:2px 4px">Start</td>
-                  <td style="padding:2px 4px">${fmt(p.start_date)}</td></tr>
-              <tr><td style="color:#666;padding:2px 4px">Expiry</td>
-                  <td style="padding:2px 4px">${fmt(p.expiry_dat)}</td></tr>
-              <tr><td style="color:#666;padding:2px 4px">Status</td>
-                  <td style="padding:2px 4px">${p.status || '—'}</td></tr>
-            </table>
-          </div>
-        `, { maxWidth: 300 });
+    // Bucket features by type, then build one L.geoJSON layer per type
+    const byType = { artisanal: [], exploration: [], largescale: [], smallscale: [] };
+    for (const feat of data.features) {
+      byType[miningTypeKey(feat.properties.type)].push(feat);
+    }
 
-        layer.on('mouseover', () => layer.setStyle({ weight: 2.5, fillOpacity: 0.65 }));
-        layer.on('mouseout',  () => miningGeoLayer.resetStyle(layer));
-      },
-    });
+    for (const [key, feats] of Object.entries(byType)) {
+      const mt = MINING_TYPES[key];
+      miningTypeLayers[key] = L.geoJSON(
+        { type: 'FeatureCollection', features: feats },
+        {
+          pane: 'miningPane',
+          style: () => ({ color: mt.color, weight: 1.2, fillColor: mt.color, fillOpacity: 0.38, opacity: 0.9 }),
+          onEachFeature: (feat, layer) => {
+            const p = feat.properties;
+            const fmt = d => d ? d.toString().split('T')[0] : '—';
+            layer.bindPopup(`
+              <div style="font-family:sans-serif;min-width:230px;max-width:280px">
+                <div style="font-weight:700;font-size:14px;margin-bottom:5px;color:#1b3a6e">${p.Name || '—'}</div>
+                <div style="display:inline-block;background:${mt.color};color:#fff;border-radius:10px;
+                            padding:2px 9px;font-size:11px;font-weight:600;margin-bottom:8px">${mt.label}</div>
+                <table style="width:100%;font-size:12px;border-collapse:collapse">
+                  <tr><td style="color:#666;padding:2px 4px;white-space:nowrap">Owner</td>
+                      <td style="padding:2px 4px;font-weight:600">${p.owner || '—'}</td></tr>
+                  <tr><td style="color:#666;padding:2px 4px">Minerals</td>
+                      <td style="padding:2px 4px">${p.assets || '—'}</td></tr>
+                  <tr><td style="color:#666;padding:2px 4px">Start</td>
+                      <td style="padding:2px 4px">${fmt(p.start_date)}</td></tr>
+                  <tr><td style="color:#666;padding:2px 4px">Expiry</td>
+                      <td style="padding:2px 4px">${fmt(p.expiry_dat)}</td></tr>
+                  <tr><td style="color:#666;padding:2px 4px">Status</td>
+                      <td style="padding:2px 4px">${p.status || '—'}</td></tr>
+                </table>
+              </div>
+            `, { maxWidth: 300 });
+            layer.on('mouseover', () => layer.setStyle({ weight: 2.5, fillOpacity: 0.65 }));
+            layer.on('mouseout',  () => miningTypeLayers[key].resetStyle(layer));
+          },
+        }
+      );
+    }
 
     miningDataLoaded = true;
     btn.textContent = '⛏ Mining Concessions';
@@ -1605,11 +1634,14 @@ document.getElementById('mining-btn').addEventListener('click', async () => {
       const ok = await loadMiningData();
       if (!ok) { miningMode = false; btn.classList.remove('active'); return; }
     }
-    miningGeoLayer.addTo(map);
+    // Add only the types that are currently visible
+    for (const [key, layer] of Object.entries(miningTypeLayers)) {
+      if (miningTypeVisible[key]) layer.addTo(map);
+    }
     if (geoLayer) geoLayer.bringToFront();
     buildMiningLegend();
   } else {
-    if (miningGeoLayer) miningGeoLayer.remove();
+    for (const layer of Object.values(miningTypeLayers)) layer.remove();
     if (miningLegendCtrl) { miningLegendCtrl.remove(); miningLegendCtrl = null; }
   }
 });
