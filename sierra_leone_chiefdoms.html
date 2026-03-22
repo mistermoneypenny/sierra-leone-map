@@ -316,6 +316,29 @@
     #ethnicity-btn:hover { background: #eaf5ee; }
     #ethnicity-btn.active { background: #2c7a4b; color: #fff; }
 
+    /* ─── Parliament toggle button ─── */
+    #parliament-btn {
+      position: absolute;
+      bottom: 152px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      border: 1.5px solid #1a3a6e;
+      color: #1a3a6e;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      z-index: 1000;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      transition: background 0.15s, color 0.15s;
+    }
+    #parliament-btn:hover { background: #eef2f9; }
+    #parliament-btn.active { background: #1a3a6e; color: #fff; }
+    #parliament-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
     /* ─── Mining Concessions toggle button ─── */
     #mining-btn {
       position: absolute;
@@ -595,6 +618,7 @@
     <div class="stat-row"><span>Chiefdoms</span><span class="num" id="total-count">—</span></div>
   </div>
 
+  <button id="parliament-btn" title="Toggle parliamentary constituency boundaries">🏛 Parliament</button>
   <button id="mining-btn" title="Toggle mining concessions layer">⛏ Mining Concessions</button>
   <button id="ethnicity-btn" title="Toggle ethnic group layer">🗺 Ethnicity Layer</button>
   <button id="reset-btn" title="Show all provinces">✕ Clear filter</button>
@@ -1310,6 +1334,150 @@ document.getElementById('cp-submit').addEventListener('click', () => {
   document.getElementById('cp-name').value    = '';
   document.getElementById('cp-coords').value  = '';
   panel.classList.remove('open');
+});
+
+// ─── Parliamentary Constituency (District) Layer ──────────────────────────────
+// Since Sierra Leone's 2023 electoral reform, the 16 districts serve as
+// multi-member proportional representation constituencies.
+const DISTRICT_PROVINCE_MAP = {
+  'Bombali': 'Northern',  'Koinadugu': 'Northern', 'Tonkolili': 'Northern',
+  'Kambia':  'Northern',  'Port Loko': 'Northern', 'Karene': 'Northern', 'Falaba': 'Northern',
+  'Kailahun':'Eastern',   'Kenema': 'Eastern',     'Kono': 'Eastern',
+  'Bo':      'Southern',  'Bonthe': 'Southern',    'Moyamba': 'Southern', 'Pujehun': 'Southern',
+  'Western Area Rural': 'Western', 'Western Area Urban': 'Western',
+  'Western Rural': 'Western',     'Western Urban': 'Western',
+};
+
+// 2023 election: 135 elected seats across 16 districts (Hare quota / largest remainder)
+const DISTRICT_SEATS_2023 = {
+  'Bo': 12, 'Bombali': 9, 'Bonthe': 3, 'Falaba': 3,
+  'Kailahun': 7, 'Kambia': 6, 'Karene': 5, 'Kenema': 12,
+  'Koinadugu': 4, 'Kono': 6, 'Moyamba': 5, 'Port Loko': 10,
+  'Pujehun': 5, 'Tonkolili': 8,
+  'Western Area Rural': 5, 'Western Area Urban': 15,
+};
+
+let parliamentLayer      = null;
+let parliamentLegendCtrl = null;
+let parliamentDataLoaded = false;
+let parliamentMode       = false;
+
+function buildParliamentLegend() {
+  const ctrl = L.control({ position: 'bottomleft' });
+  ctrl.onAdd = () => {
+    const div = L.DomUtil.create('div', 'map-legend');
+    div.innerHTML = `
+      <div class="legend-title" style="margin-bottom:4px">Parliamentary Constituencies</div>
+      <div style="font-size:10px;color:#888;margin-bottom:8px">16 Districts · 2023 PR System · 135 elected seats</div>
+      ${Object.entries(PROVINCES).map(([k, v]) =>
+        `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+          <span style="display:inline-block;width:26px;height:10px;border-radius:2px;
+                       border:3px dashed ${v.color};background:${v.color}18;flex-shrink:0"></span>
+          <span style="font-size:12px;color:#333">${v.label}</span>
+        </div>`
+      ).join('')}
+    `;
+    return div;
+  };
+  ctrl.addTo(map);
+  parliamentLegendCtrl = ctrl;
+}
+
+async function loadParliamentData() {
+  const btn = document.getElementById('parliament-btn');
+  btn.textContent = '⏳ Loading…';
+  btn.disabled = true;
+
+  // geoBoundaries ADM2 for Sierra Leone (districts)
+  const url = 'https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/SLE/ADM2/geoBoundaries-SLE-ADM2.geojson';
+
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (!map.getPane('parliamentPane')) {
+      map.createPane('parliamentPane');
+      map.getPane('parliamentPane').style.zIndex = 380;
+      map.getPane('parliamentPane').style.pointerEvents = 'auto';
+    }
+
+    parliamentLayer = L.geoJSON(data, {
+      pane: 'parliamentPane',
+      style: feat => {
+        const name = feat.properties.shapeName;
+        const prov = DISTRICT_PROVINCE_MAP[name] || 'Northern';
+        const col  = (PROVINCES[prov] || PROVINCES['Northern']).color;
+        return {
+          color:       col,
+          weight:      3,
+          dashArray:   '10, 6',
+          fillColor:   col,
+          fillOpacity: 0.06,
+          opacity:     1,
+        };
+      },
+      onEachFeature: (feat, layer) => {
+        const name  = feat.properties.shapeName;
+        const prov  = DISTRICT_PROVINCE_MAP[name] || 'Unknown';
+        const col   = (PROVINCES[prov] || PROVINCES['Northern']).color;
+        const seats = DISTRICT_SEATS_2023[name] || '—';
+
+        layer.bindTooltip(`<strong>${name}</strong>`, {
+          permanent: false,
+          className: 'chiefdom-tip',
+          direction: 'center',
+        });
+
+        layer.bindPopup(`
+          <div style="font-family:sans-serif;min-width:210px">
+            <div style="font-weight:700;font-size:15px;margin-bottom:2px;color:${col}">${name} District</div>
+            <div style="font-size:12px;color:#666;margin-bottom:10px">${(PROVINCES[prov]||PROVINCES['Northern']).label}</div>
+            <table style="width:100%;font-size:12px;border-collapse:collapse">
+              <tr><td style="color:#888;padding:3px 4px">Electoral system</td>
+                  <td style="padding:3px 4px;font-weight:600">Proportional Representation</td></tr>
+              <tr><td style="color:#888;padding:3px 4px">Parliament seats</td>
+                  <td style="padding:3px 4px;font-weight:600">${seats}</td></tr>
+              <tr><td style="color:#888;padding:3px 4px">Chief seats</td>
+                  <td style="padding:3px 4px">1 (Paramount Chief)</td></tr>
+            </table>
+            <div style="font-size:10px;color:#aaa;margin-top:8px">June 2023 General Election</div>
+          </div>
+        `, { maxWidth: 280 });
+
+        layer.on('mouseover', () => layer.setStyle({ weight: 5, fillOpacity: 0.18 }));
+        layer.on('mouseout',  () => parliamentLayer.resetStyle(layer));
+      },
+    });
+
+    parliamentDataLoaded = true;
+    btn.textContent = '🏛 Parliament';
+    btn.disabled = false;
+    return true;
+  } catch (err) {
+    console.error('Parliament data load failed:', err);
+    btn.textContent = '🏛 Parliament';
+    btn.disabled = false;
+    return false;
+  }
+}
+
+document.getElementById('parliament-btn').addEventListener('click', async () => {
+  parliamentMode = !parliamentMode;
+  const btn = document.getElementById('parliament-btn');
+  btn.classList.toggle('active', parliamentMode);
+
+  if (parliamentMode) {
+    if (!parliamentDataLoaded) {
+      const ok = await loadParliamentData();
+      if (!ok) { parliamentMode = false; btn.classList.remove('active'); return; }
+    }
+    parliamentLayer.addTo(map);
+    if (geoLayer) geoLayer.bringToFront();
+    buildParliamentLegend();
+  } else {
+    if (parliamentLayer) parliamentLayer.remove();
+    if (parliamentLegendCtrl) { parliamentLegendCtrl.remove(); parliamentLegendCtrl = null; }
+  }
 });
 
 // ─── Mining Concessions Layer ─────────────────────────────────────────────────
