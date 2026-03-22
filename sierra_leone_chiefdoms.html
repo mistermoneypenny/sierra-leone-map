@@ -1388,8 +1388,8 @@ async function loadParliamentData() {
   btn.textContent = '⏳ Loading…';
   btn.disabled = true;
 
-  // geoBoundaries ADM2 for Sierra Leone (districts)
-  const url = 'https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/SLE/ADM2/geoBoundaries-SLE-ADM2.geojson';
+  // District boundaries hosted in the same repo (geoBoundaries ADM2, SLE)
+  const url = 'sle_districts.geojson';
 
   try {
     const resp = await fetch(url);
