@@ -297,115 +297,126 @@
       margin-top: 2px;
     }
 
-    /* ─── Chiefdom layer toggle button ─── */
-    #chiefdom-btn {
+    /* ─── Command Panel (right side) ─── */
+    #command-panel {
       position: absolute;
-      bottom: 192px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      border: 1.5px solid #4a5568;
-      color: #4a5568;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 7px 16px;
-      border-radius: 20px;
-      cursor: pointer;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
       z-index: 1000;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      transition: background 0.15s, color 0.15s;
+      width: 220px;
+      background: rgba(255,255,255,0.98);
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+      overflow: hidden;
+      font-family: inherit;
     }
-    #chiefdom-btn:hover { background: #f0f2f5; }
-    #chiefdom-btn.active { background: #4a5568; color: #fff; }
-
-    /* ─── Ethnicity toggle button ─── */
-    #ethnicity-btn {
-      position: absolute;
-      bottom: 72px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      border: 1.5px solid #2c7a4b;
-      color: #2c7a4b;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 7px 16px;
-      border-radius: 20px;
-      cursor: pointer;
-      z-index: 1000;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      transition: background 0.15s, color 0.15s;
+    .cmd-header {
+      background: linear-gradient(135deg, #1b5e35, #2c7a4b);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
     }
-    #ethnicity-btn:hover { background: #eaf5ee; }
-    #ethnicity-btn.active { background: #2c7a4b; color: #fff; }
-
-    /* ─── Parliament toggle button ─── */
-    #parliament-btn {
-      position: absolute;
-      bottom: 152px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      border: 1.5px solid #1a3a6e;
-      color: #1a3a6e;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 7px 16px;
-      border-radius: 20px;
-      cursor: pointer;
-      z-index: 1000;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      transition: background 0.15s, color 0.15s;
+    .cmd-section {
+      padding: 8px 0 4px;
+      border-bottom: 1px solid #eef0ee;
     }
-    #parliament-btn:hover { background: #eef2f9; }
-    #parliament-btn.active { background: #1a3a6e; color: #fff; }
-    #parliament-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    /* ─── Mining Concessions toggle button ─── */
-    #mining-btn {
-      position: absolute;
-      bottom: 112px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      border: 1.5px solid #7b5c00;
-      color: #7b5c00;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 7px 16px;
-      border-radius: 20px;
-      cursor: pointer;
-      z-index: 1000;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      transition: background 0.15s, color 0.15s;
+    .cmd-section:last-child { border-bottom: none; }
+    .cmd-section-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #bbb;
+      padding: 0 14px 5px;
     }
-    #mining-btn:hover { background: #fdf6e3; }
-    #mining-btn.active { background: #7b5c00; color: #fff; }
-    #mining-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    /* ─── Reset button ─── */
-    #reset-btn {
-      position: absolute;
-      bottom: 32px;
-      left: 14px;
-      z-index: 1000;
-      background: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 14px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #1b5e35;
+    .cmd-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 14px;
       cursor: pointer;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.18);
+      transition: background 0.14s;
+      user-select: none;
+      border-radius: 0;
+    }
+    .cmd-row:hover { background: #f4f6f4; }
+    .cmd-row.active { background: #f0f7f2; }
+    .cmd-row.loading { pointer-events: none; opacity: 0.65; }
+    .cmd-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+    .cmd-label { flex: 1; font-size: 13px; font-weight: 600; color: #444; line-height: 1.2; }
+    .cmd-row.active .cmd-label { color: #1b5e35; }
+    /* Pill toggle */
+    .cmd-pill {
+      width: 34px; height: 19px;
+      border-radius: 10px;
+      background: #d4d4d4;
+      position: relative;
+      flex-shrink: 0;
+      transition: background 0.18s;
+    }
+    .cmd-pill::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 15px; height: 15px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.22);
+      transition: left 0.18s;
+    }
+    .cmd-row.active   .cmd-pill { background: #2c7a4b; }
+    .cmd-row.active   .cmd-pill::after { left: 17px; }
+    .cmd-row.loading  .cmd-pill { background: #f5a623; }
+    /* Mining sub-category rows (inside panel) */
+    #mining-subs {
       display: none;
-      transition: background 0.15s;
+      padding: 2px 14px 6px 43px;
+      flex-direction: column;
+      gap: 1px;
     }
-    #reset-btn:hover { background: #f0f7f2; }
+    #mining-btn.active ~ #mining-subs { display: flex; }
+    .cmd-sub-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 6px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: opacity 0.14s, background 0.14s;
+      user-select: none;
+    }
+    .cmd-sub-row:hover { background: #eef4fb; }
+    .cmd-sub-row.dimmed { opacity: 0.32; }
+    .cmd-sub-swatch {
+      width: 11px; height: 11px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.15);
+    }
+    .cmd-sub-label { font-size: 11px; color: #555; }
+    /* Reset filter button */
+    #reset-btn {
+      display: none;
+      width: 100%;
+      padding: 9px 14px;
+      border: none;
+      background: none;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #b03030;
+      cursor: pointer;
+      transition: background 0.14s;
+      font-family: inherit;
+    }
+    #reset-btn:hover { background: #fdf0f0; }
 
     /* ─── Plot Concession Button (lives in header) ─── */
     #plot-btn {
@@ -643,11 +654,59 @@
     <div class="stat-row"><span>Chiefdoms</span><span class="num" id="total-count">—</span></div>
   </div>
 
-  <button id="chiefdom-btn" class="active" title="Toggle paramount chiefdom boundaries">🗾 Chiefdoms</button>
-  <button id="parliament-btn" title="Toggle parliamentary constituency boundaries">🏛 Parliament</button>
-  <button id="mining-btn" title="Toggle mining concessions layer">⛏ Mining Concessions</button>
-  <button id="ethnicity-btn" title="Toggle ethnic group layer">🗺 Ethnicity Layer</button>
-  <button id="reset-btn" title="Show all provinces">✕ Clear filter</button>
+  <div id="command-panel">
+    <div class="cmd-header">🗺 Map Layers</div>
+
+    <div class="cmd-section">
+      <div class="cmd-section-label">Boundaries</div>
+      <div class="cmd-row active" id="chiefdom-btn" title="Toggle paramount chiefdom boundaries">
+        <span class="cmd-icon">🗾</span>
+        <span class="cmd-label">Chiefdoms</span>
+        <div class="cmd-pill"></div>
+      </div>
+      <div class="cmd-row" id="ethnicity-btn" title="Toggle ethnic group layer">
+        <span class="cmd-icon">🎨</span>
+        <span class="cmd-label">Ethnicity</span>
+        <div class="cmd-pill"></div>
+      </div>
+      <div class="cmd-row" id="parliament-btn" title="Toggle parliamentary constituency boundaries">
+        <span class="cmd-icon">🏛</span>
+        <span class="cmd-label">Parliament</span>
+        <div class="cmd-pill"></div>
+      </div>
+    </div>
+
+    <div class="cmd-section">
+      <div class="cmd-section-label">Resources</div>
+      <div class="cmd-row" id="mining-btn" title="Toggle mining concessions layer">
+        <span class="cmd-icon">⛏</span>
+        <span class="cmd-label">Mining Concessions</span>
+        <div class="cmd-pill"></div>
+      </div>
+      <div id="mining-subs">
+        <div class="cmd-sub-row" data-key="artisanal">
+          <div class="cmd-sub-swatch" style="background:#2980b9"></div>
+          <span class="cmd-sub-label">Artisanal Mining</span>
+        </div>
+        <div class="cmd-sub-row" data-key="exploration">
+          <div class="cmd-sub-swatch" style="background:#e67e22"></div>
+          <span class="cmd-sub-label">Exploration License</span>
+        </div>
+        <div class="cmd-sub-row" data-key="largescale">
+          <div class="cmd-sub-swatch" style="background:#c0392b"></div>
+          <span class="cmd-sub-label">Large Scale / Mining Lease</span>
+        </div>
+        <div class="cmd-sub-row" data-key="smallscale">
+          <div class="cmd-sub-swatch" style="background:#8e44ad"></div>
+          <span class="cmd-sub-label">Small Scale</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmd-section" id="reset-section" style="display:none">
+      <button id="reset-btn" title="Clear province filter">✕ Clear Province Filter</button>
+    </div>
+  </div>
 
   <!-- ─── Concession Side Panel ─── -->
   <div id="concession-panel">
@@ -967,14 +1026,13 @@ function applyProvinceFilter(prov, toggle = true) {
     el.classList.toggle('dimmed', !!activeProvince && el.dataset.prov !== activeProvince);
   });
 
-  const resetBtn = document.getElementById('reset-btn');
-  resetBtn.style.display = activeProvince ? 'block' : 'none';
+  document.getElementById('reset-section').style.display = activeProvince ? 'block' : 'none';
 }
 
 document.getElementById('reset-btn').addEventListener('click', () => {
   activeProvince = null;
   applyProvinceFilter(null, false);
-  document.getElementById('reset-btn').style.display = 'none';
+  document.getElementById('reset-section').style.display = 'none';
 });
 
 // ─── Legend ──────────────────────────────────────────────────────────────────
@@ -1400,8 +1458,9 @@ function buildParliamentLegend() {
 
 async function loadParliamentData() {
   const btn = document.getElementById('parliament-btn');
-  btn.textContent = '⏳ Loading…';
-  btn.disabled = true;
+  btn.querySelector('.cmd-label').textContent = 'Loading…';
+  btn.querySelector('.cmd-icon').textContent = '⏳';
+  btn.classList.add('loading');
 
   // District boundaries hosted in the same repo (geoBoundaries ADM2, SLE)
   const url = 'sle_districts.geojson';
@@ -1465,13 +1524,15 @@ async function loadParliamentData() {
     });
 
     parliamentDataLoaded = true;
-    btn.textContent = '🏛 Parliament';
-    btn.disabled = false;
+    btn.querySelector('.cmd-label').textContent = 'Parliament';
+    btn.querySelector('.cmd-icon').textContent = '🏛';
+    btn.classList.remove('loading');
     return true;
   } catch (err) {
     console.error('Parliament data load failed:', err);
-    btn.textContent = '🏛 Parliament';
-    btn.disabled = false;
+    btn.querySelector('.cmd-label').textContent = 'Parliament';
+    btn.querySelector('.cmd-icon').textContent = '🏛';
+    btn.classList.remove('loading');
     return false;
   }
 }
@@ -1514,52 +1575,32 @@ function miningTypeKey(typeStr) {
 
 let miningTypeLayers  = {};   // key → L.geoJSON layer, one per MINING_TYPES key
 let miningTypeVisible = { artisanal: true, exploration: true, largescale: true, smallscale: true };
-let miningLegendCtrl  = null;
 let miningDataLoaded  = false;
 let miningMode        = false;
 
-function buildMiningLegend() {
-  const ctrl = L.control({ position: 'bottomleft' });
-  ctrl.onAdd = () => {
-    const div = L.DomUtil.create('div', 'map-legend');
-    div.innerHTML = `
-      <div class="legend-title" style="margin-bottom:4px">Mining Concessions</div>
-      <div style="font-size:10px;color:#888;margin-bottom:8px">National Minerals Agency · Sierra Leone</div>
-      ${Object.entries(MINING_TYPES).map(([key, v]) =>
-        `<div class="mining-type-row ${miningTypeVisible[key] ? '' : 'dimmed'}"
-              data-key="${key}"
-              style="display:flex;align-items:center;gap:8px;margin-bottom:4px"
-              title="Click to show/hide">
-          <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${v.color};flex-shrink:0;border:1px solid rgba(0,0,0,0.2)"></span>
-          <span style="font-size:12px;color:#333">${v.label}</span>
-        </div>`
-      ).join('')}
-    `;
-    // Wire up per-type toggle clicks
-    div.querySelectorAll('.mining-type-row').forEach(row => {
-      L.DomEvent.on(row, 'click', () => {
-        const key = row.dataset.key;
-        miningTypeVisible[key] = !miningTypeVisible[key];
-        row.classList.toggle('dimmed', !miningTypeVisible[key]);
-        if (miningTypeVisible[key]) {
-          miningTypeLayers[key]?.addTo(map);
-          if (geoLayer) geoLayer.bringToFront();
-        } else {
-          miningTypeLayers[key]?.remove();
-        }
-      });
+function initMiningSubcategoryToggles() {
+  document.querySelectorAll('#mining-subs .cmd-sub-row').forEach(row => {
+    row.addEventListener('click', e => {
+      e.stopPropagation();
+      const key = row.dataset.key;
+      miningTypeVisible[key] = !miningTypeVisible[key];
+      row.classList.toggle('dimmed', !miningTypeVisible[key]);
+      if (miningTypeVisible[key]) {
+        miningTypeLayers[key]?.addTo(map);
+        if (geoLayer) geoLayer.bringToFront();
+      } else {
+        miningTypeLayers[key]?.remove();
+      }
     });
-    L.DomEvent.disableClickPropagation(div);
-    return div;
-  };
-  ctrl.addTo(map);
-  miningLegendCtrl = ctrl;
+  });
 }
+initMiningSubcategoryToggles();
 
 async function loadMiningData() {
   const btn = document.getElementById('mining-btn');
-  btn.textContent = '⏳ Loading…';
-  btn.disabled = true;
+  btn.querySelector('.cmd-label').textContent = 'Loading…';
+  btn.querySelector('.cmd-icon').textContent = '⏳';
+  btn.classList.add('loading');
 
   const url = 'https://services8.arcgis.com/PCeCk32MjqBcahrl/arcgis/rest/services/GoSL_AllActiveLicences/FeatureServer/0/query'
     + '?where=1%3D1&outFields=Name,owner,type,status,start_date,expiry_dat,assets&f=geojson&resultRecordCount=2000';
@@ -1618,13 +1659,15 @@ async function loadMiningData() {
     }
 
     miningDataLoaded = true;
-    btn.textContent = '⛏ Mining Concessions';
-    btn.disabled = false;
+    btn.querySelector('.cmd-label').textContent = 'Mining Concessions';
+    btn.querySelector('.cmd-icon').textContent = '⛏';
+    btn.classList.remove('loading');
     return true;
   } catch (err) {
     console.error('Mining data load failed:', err);
-    btn.textContent = '⛏ Mining Concessions';
-    btn.disabled = false;
+    btn.querySelector('.cmd-label').textContent = 'Mining Concessions';
+    btn.querySelector('.cmd-icon').textContent = '⛏';
+    btn.classList.remove('loading');
     return false;
   }
 }
@@ -1644,10 +1687,8 @@ document.getElementById('mining-btn').addEventListener('click', async () => {
       if (miningTypeVisible[key]) layer.addTo(map);
     }
     if (geoLayer) geoLayer.bringToFront();
-    buildMiningLegend();
   } else {
     for (const layer of Object.values(miningTypeLayers)) layer.remove();
-    if (miningLegendCtrl) { miningLegendCtrl.remove(); miningLegendCtrl = null; }
   }
 });
 
