@@ -721,119 +721,61 @@ const ETHNICITIES = {
   'Krio':    { color: '#c0392b', label: 'Krio'    },
 };
 
-// ─── Custom canvas layer: draws ethnic_map.png clipped to Sierra Leone's exact border ───
-// Uses a Leaflet managed pane (ethnicPane, z-index 350) so the canvas lives inside
-// the leaflet-map-pane CSS stacking context — same as L.ImageOverlay internally.
-// Coordinates use latLngToLayerPoint minus the canvas origin (NW corner layer-point).
-const EthnicityImageLayer = L.Layer.extend({
-  onAdd(map) {
-    this._map = map;
+// ─── Ethnic group layer — vector-based (colours the existing chiefdom polygons) ──────────
+// Each chiefdom is coloured by its dominant ethnic group using NAME_2 (district) as the
+// primary lookup and NAME_3 (chiefdom) for fine-grained overrides.  Because the same
+// GeoJSON drives both the border lines and the colour fills, the layer is guaranteed to
+// conform exactly to Sierra Leone's administrative borders — no image calibration needed.
 
-    // Create a dedicated pane between tiles (200) and the GeoJSON overlay pane (400)
-    if (!map.getPane('ethnicPane')) {
-      map.createPane('ethnicPane');
-      map.getPane('ethnicPane').style.zIndex = 350;
-      map.getPane('ethnicPane').style.pointerEvents = 'none';
-    }
+// District-level defaults  (NAME_2 → ethnic key)
+const DISTRICT_ETHNIC = {
+  'WesternUrban': 'Krio',
+  'WesternRural': 'Krio',
+  'Kambia':       'Temne',    // southern Kambia; coastal chiefdoms overridden below
+  'PortLoko':     'Temne',
+  'Tonkolili':    'Temne',
+  'Bombali':      'Temne',    // core Temne; northern chiefdoms overridden below
+  'Koinadugu':    'Koranko',
+  'Bo':           'Mende',
+  'Bonthe':       'Sherbro',
+  'Moyamba':      'Mende',
+  'Pujehun':      'Mende',
+  'Kenema':       'Mende',
+  'Kono':         'Kono',
+  'Kailahun':     'Mende',
+};
 
-    this._canvas = L.DomUtil.create('canvas', 'eth-canvas', map.getPane('ethnicPane'));
-    this._canvas.style.cssText = 'position:absolute;mix-blend-mode:multiply;pointer-events:none;';
+// Chiefdom-level overrides  (NAME_3 → ethnic key)
+// Only listed where the chiefdom's group differs from its district default above.
+const CHIEFDOM_ETHNIC = {
+  // Susu — coastal/northern Kambia
+  'Bramaia':          'Susu',
+  'Mambolo':          'Susu',
+  'Samu':             'Susu',
+  // Susu — northern Port Loko
+  'BuyaRomende':      'Susu',
+  'Dibia':            'Susu',
+  // Susu — upper Bombali (on the Kambia border)
+  'MagbembaGowahun':  'Susu',
+  // Limba — in Kambia
+  'TonkoLimba':       'Limba',
+  // Limba — in Bombali
+  'SafrokoLimba':     'Limba',
+  'SellaLimba':       'Limba',
+  'Libeisaygahun':    'Limba',
+  // Koranko — northeastern Bombali
+  'Tambakha':         'Koranko',
+  // Sherbro — coastal Moyamba chiefdoms
+  'Kagboro':          'Sherbro',
+  'Ribbi':            'Sherbro',
+  'Kori':             'Sherbro',
+};
 
-    this._img = new Image();
-    this._img.onload = () => this._reset();
-    this._img.src = 'ethnic_map.png';
-
-    map.on('viewreset zoom move', this._reset, this);
-    this._reset();
-  },
-  onRemove(map) {
-    L.DomUtil.remove(this._canvas);
-    map.off('viewreset zoom move', this._reset, this);
-  },
-  _reset() {
-    const map = this._map;
-    const sz  = map.getSize();
-
-    // Pin the canvas's top-left to the NW corner of the current viewport in layer-point space
-    this._origin = map.latLngToLayerPoint(map.getBounds().getNorthWest());
-    L.DomUtil.setPosition(this._canvas, this._origin);
-
-    this._canvas.width  = sz.x;
-    this._canvas.height = sz.y;
-    this._drawContent();
-  },
-  _drawContent() {
-    const map = this._map;
-    const c   = this._canvas;
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0, 0, c.width, c.height);
-    if (!this._img.complete || !allFeatures?.length) return;
-
-    const origin = this._origin;
-    // Convert a LatLng to canvas pixel coords (layer-point minus canvas origin)
-    const toPx = latLng => {
-      const lp = map.latLngToLayerPoint(latLng);
-      return [lp.x - origin.x, lp.y - origin.y];
-    };
-
-    // 1. Draw the reference ethnicity image to an off-screen canvas so we can
-    //    pixel-process it before compositing.
-    // Calibration (745×858 px image, verified by pixel sampling):
-    //   Bo     (7.96°N,-11.74°W) → pixel (373,554) ✓ olive/Mende
-    //   Makeni (8.88°N,-12.04°W) → pixel (320,387) ✓ orange/Temne
-    //   Kainkordu (8.47°N,-10.90°W) → pixel (615,369) ✓ blue/Kono
-    //   Scale: 177 px/°lon, 182 px/°lat
-    //   → full image: NW = 11.004°N –13.848°W, SE = 6.290°N –9.638°W
-    const nb = L.latLngBounds([[6.29, -13.848], [11.004, -9.638]]);
-    const [nwx, nwy] = toPx(nb.getNorthWest());
-    const [sex, sey] = toPx(nb.getSouthEast());
-
-    // Off-screen canvas: draw the raw image, then strip grayscale pixels
-    // (text labels, white ocean, legend box) by zeroing pixels whose
-    // chroma (max–min of R,G,B) is below a threshold.  Only chromatic pixels
-    // (the actual ethnic-group colour fills) survive — no printed text remains.
-    const tmp    = document.createElement('canvas');
-    tmp.width    = c.width;
-    tmp.height   = c.height;
-    const tmpCtx = tmp.getContext('2d');
-    tmpCtx.drawImage(this._img, nwx, nwy, sex - nwx, sey - nwy);
-
-    const id = tmpCtx.getImageData(0, 0, tmp.width, tmp.height);
-    const d  = id.data;
-    for (let i = 0; i < d.length; i += 4) {
-      // chroma = max(R,G,B) − min(R,G,B); near-zero means grey/white/black
-      const chroma = Math.max(d[i], d[i+1], d[i+2]) - Math.min(d[i], d[i+1], d[i+2]);
-      if (chroma < 25) d[i+3] = 0;   // transparent → removes text & background
-    }
-    tmpCtx.putImageData(id, 0, 0);
-
-    // 2. Composite the cleaned colour layer onto the main canvas
-    ctx.globalAlpha = 0.82;
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(tmp, 0, 0);
-
-    // 3. destination-in: erase everything outside Sierra Leone's chiefdom polygons
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.beginPath();
-    allFeatures.forEach(f => {
-      const geom = f.geometry;
-      (geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates).forEach(poly => {
-        poly.forEach(ring => {
-          ring.forEach((coord, i) => {
-            const [x, y] = toPx(L.latLng(coord[1], coord[0]));
-            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-          });
-          ctx.closePath();
-        });
-      });
-    });
-    ctx.fill('evenodd');
-  }
-});
+function getChiefdomEthnic(props) {
+  return CHIEFDOM_ETHNIC[props.NAME_3] || DISTRICT_ETHNIC[props.NAME_2] || null;
+}
 
 let ethnicityMode = false;
-let ethOverlayLayer = null;
 
 // GADM district names have no spaces – format them for display
 function fmtDistrict(raw) {
@@ -880,10 +822,18 @@ let activeProvince = null;
 // ─── Styles ─────────────────────────────────────────────────────────────────
 function featureStyle(feature, highlighted = false) {
   const prov = getProvince(feature.properties);
-  const col  = ethnicityMode ? '#888' : (PROVINCES[prov] || PROVINCES['Northern']).color;
+  let col, fillOp;
+  if (ethnicityMode) {
+    const ethnic = getChiefdomEthnic(feature.properties);
+    col    = ethnic ? ETHNICITIES[ethnic].color : '#888888';
+    fillOp = 0.70;
+  } else {
+    col    = (PROVINCES[prov] || PROVINCES['Northern']).color;
+    fillOp = highlighted ? 0.88 : 0.52;
+  }
   return {
     fillColor:   col,
-    fillOpacity: ethnicityMode ? 0.08 : (highlighted ? 0.88 : 0.52),
+    fillOpacity: fillOp,
     color:       'rgba(255,255,255,0.65)',
     weight:      highlighted ? 2.8 : 1.3,
     dashArray:   '',
@@ -1048,23 +998,15 @@ document.getElementById('ethnicity-btn').addEventListener('click', () => {
   document.getElementById('ethnicity-btn').classList.toggle('active', ethnicityMode);
 
   if (ethnicityMode) {
-    // Fade chiefdom fills so the overlay reads clearly
+    // Colour each chiefdom polygon by its ethnic group
     if (geoLayer) geoLayer.eachLayer(l => l.setStyle(featureStyle(l.feature)));
-
-    // Canvas layer: draws ethnic_map.png clipped exactly to Sierra Leone's borders.
-    ethOverlayLayer = new EthnicityImageLayer().addTo(map);
-
-    // Bring chiefdom borders to the front so they show above the overlay
-    if (geoLayer) geoLayer.bringToFront();
 
     // Swap legend
     document.querySelector('.map-legend')?.classList.add('hidden-legend');
     buildEthnicityLegend();
 
   } else {
-    // Remove overlay
-    if (ethOverlayLayer) { ethOverlayLayer.remove(); ethOverlayLayer = null; }
-    if (ethLegendCtrl)   { ethLegendCtrl.remove();   ethLegendCtrl = null;   }
+    if (ethLegendCtrl) { ethLegendCtrl.remove(); ethLegendCtrl = null; }
 
     // Restore province colours
     if (geoLayer) geoLayer.eachLayer(l => l.setStyle(featureStyle(l.feature)));
