@@ -725,7 +725,7 @@
 
     <div class="cmd-section">
       <div class="cmd-section-label">Geology</div>
-      <div class="cmd-row" id="geology-btn" title="Toggle bedrock geological units (OneGeology / BGS)">
+      <div class="cmd-row" id="geology-btn" title="Toggle bedrock geological units (Macrostrat / UW–Madison)">
         <span class="cmd-icon">🪨</span><span class="cmd-label">Geological Units</span><div class="cmd-pill"></div>
       </div>
     </div>
@@ -2006,15 +2006,15 @@ document.getElementById('geology-btn').addEventListener('click', () => {
         map.createPane('geologyPane');
         map.getPane('geologyPane').style.zIndex = 290;
       }
-      geologyLayer = L.tileLayer.wms('https://map.onegeology.org/wms', {
-        pane:        'geologyPane',
-        layers:      'BGS_GCFR_Bedrock_and_Structural_Geology',
-        format:      'image/png',
-        transparent: true,
-        version:     '1.3.0',
-        opacity:     0.65,
-        attribution: '© OneGeology / BGS',
-      });
+      geologyLayer = L.tileLayer(
+        'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
+        {
+          pane:        'geologyPane',
+          opacity:     0.65,
+          attribution: '© Macrostrat / UW–Madison',
+          maxZoom:     19,
+        }
+      );
     }
     geologyLayer.addTo(map);
     if (geoLayer) geoLayer.bringToFront();
