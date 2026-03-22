@@ -202,6 +202,9 @@
     }
     .leg-row:hover { background: #f0f7f2; }
     .leg-row.dimmed { opacity: 0.4; }
+    .mining-type-row { cursor: pointer; border-radius: 4px; padding: 3px 4px; transition: opacity 0.15s, background 0.15s; user-select: none; }
+    .mining-type-row:hover { background: #f0f4ff; }
+    .mining-type-row.dimmed { opacity: 0.35; }
     .map-legend.hidden-legend { display: none; }
     /* Canvas ethnicity layer – mix-blend-mode set inline via JS */
     .eth-canvas { z-index: 350 !important; }
@@ -294,93 +297,126 @@
       margin-top: 2px;
     }
 
-    /* ─── Ethnicity toggle button ─── */
-    #ethnicity-btn {
+    /* ─── Command Panel (right side) ─── */
+    #command-panel {
       position: absolute;
-      bottom: 72px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      border: 1.5px solid #2c7a4b;
-      color: #2c7a4b;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 7px 16px;
-      border-radius: 20px;
-      cursor: pointer;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
       z-index: 1000;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      transition: background 0.15s, color 0.15s;
+      width: 220px;
+      background: rgba(255,255,255,0.98);
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+      overflow: hidden;
+      font-family: inherit;
     }
-    #ethnicity-btn:hover { background: #eaf5ee; }
-    #ethnicity-btn.active { background: #2c7a4b; color: #fff; }
-
-    /* ─── Parliament toggle button ─── */
-    #parliament-btn {
-      position: absolute;
-      bottom: 152px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      border: 1.5px solid #1a3a6e;
-      color: #1a3a6e;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 7px 16px;
-      border-radius: 20px;
-      cursor: pointer;
-      z-index: 1000;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      transition: background 0.15s, color 0.15s;
+    .cmd-header {
+      background: linear-gradient(135deg, #1b5e35, #2c7a4b);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
     }
-    #parliament-btn:hover { background: #eef2f9; }
-    #parliament-btn.active { background: #1a3a6e; color: #fff; }
-    #parliament-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    /* ─── Mining Concessions toggle button ─── */
-    #mining-btn {
-      position: absolute;
-      bottom: 112px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      border: 1.5px solid #7b5c00;
-      color: #7b5c00;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 7px 16px;
-      border-radius: 20px;
-      cursor: pointer;
-      z-index: 1000;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      transition: background 0.15s, color 0.15s;
+    .cmd-section {
+      padding: 8px 0 4px;
+      border-bottom: 1px solid #eef0ee;
     }
-    #mining-btn:hover { background: #fdf6e3; }
-    #mining-btn.active { background: #7b5c00; color: #fff; }
-    #mining-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    /* ─── Reset button ─── */
-    #reset-btn {
-      position: absolute;
-      bottom: 32px;
-      left: 14px;
-      z-index: 1000;
-      background: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 14px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #1b5e35;
+    .cmd-section:last-child { border-bottom: none; }
+    .cmd-section-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #bbb;
+      padding: 0 14px 5px;
+    }
+    .cmd-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 14px;
       cursor: pointer;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.18);
+      transition: background 0.14s;
+      user-select: none;
+      border-radius: 0;
+    }
+    .cmd-row:hover { background: #f4f6f4; }
+    .cmd-row.active { background: #f0f7f2; }
+    .cmd-row.loading { pointer-events: none; opacity: 0.65; }
+    .cmd-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+    .cmd-label { flex: 1; font-size: 13px; font-weight: 600; color: #444; line-height: 1.2; }
+    .cmd-row.active .cmd-label { color: #1b5e35; }
+    /* Pill toggle */
+    .cmd-pill {
+      width: 34px; height: 19px;
+      border-radius: 10px;
+      background: #d4d4d4;
+      position: relative;
+      flex-shrink: 0;
+      transition: background 0.18s;
+    }
+    .cmd-pill::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 15px; height: 15px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.22);
+      transition: left 0.18s;
+    }
+    .cmd-row.active   .cmd-pill { background: #2c7a4b; }
+    .cmd-row.active   .cmd-pill::after { left: 17px; }
+    .cmd-row.loading  .cmd-pill { background: #f5a623; }
+    /* Mining sub-category rows (inside panel) */
+    #mining-subs {
       display: none;
-      transition: background 0.15s;
+      padding: 2px 14px 6px 43px;
+      flex-direction: column;
+      gap: 1px;
     }
-    #reset-btn:hover { background: #f0f7f2; }
+    #mining-btn.active ~ #mining-subs { display: flex; }
+    .cmd-sub-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 6px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: opacity 0.14s, background 0.14s;
+      user-select: none;
+    }
+    .cmd-sub-row:hover { background: #eef4fb; }
+    .cmd-sub-row.dimmed { opacity: 0.32; }
+    .cmd-sub-swatch {
+      width: 11px; height: 11px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.15);
+    }
+    .cmd-sub-label { font-size: 11px; color: #555; }
+    /* Reset filter button */
+    #reset-btn {
+      display: none;
+      width: 100%;
+      padding: 9px 14px;
+      border: none;
+      background: none;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #b03030;
+      cursor: pointer;
+      transition: background 0.14s;
+      font-family: inherit;
+    }
+    #reset-btn:hover { background: #fdf0f0; }
 
     /* ─── Plot Concession Button (lives in header) ─── */
     #plot-btn {
@@ -618,10 +654,59 @@
     <div class="stat-row"><span>Chiefdoms</span><span class="num" id="total-count">—</span></div>
   </div>
 
-  <button id="parliament-btn" title="Toggle parliamentary constituency boundaries">🏛 Parliament</button>
-  <button id="mining-btn" title="Toggle mining concessions layer">⛏ Mining Concessions</button>
-  <button id="ethnicity-btn" title="Toggle ethnic group layer">🗺 Ethnicity Layer</button>
-  <button id="reset-btn" title="Show all provinces">✕ Clear filter</button>
+  <div id="command-panel">
+    <div class="cmd-header">🗺 Map Layers</div>
+
+    <div class="cmd-section">
+      <div class="cmd-section-label">Boundaries</div>
+      <div class="cmd-row active" id="chiefdom-btn" title="Toggle paramount chiefdom boundaries">
+        <span class="cmd-icon">🗾</span>
+        <span class="cmd-label">Chiefdoms</span>
+        <div class="cmd-pill"></div>
+      </div>
+      <div class="cmd-row" id="ethnicity-btn" title="Toggle ethnic group layer">
+        <span class="cmd-icon">🎨</span>
+        <span class="cmd-label">Ethnicity</span>
+        <div class="cmd-pill"></div>
+      </div>
+      <div class="cmd-row" id="parliament-btn" title="Toggle parliamentary constituency boundaries">
+        <span class="cmd-icon">🏛</span>
+        <span class="cmd-label">Parliament</span>
+        <div class="cmd-pill"></div>
+      </div>
+    </div>
+
+    <div class="cmd-section">
+      <div class="cmd-section-label">Resources</div>
+      <div class="cmd-row" id="mining-btn" title="Toggle mining concessions layer">
+        <span class="cmd-icon">⛏</span>
+        <span class="cmd-label">Mining Concessions</span>
+        <div class="cmd-pill"></div>
+      </div>
+      <div id="mining-subs">
+        <div class="cmd-sub-row" data-key="artisanal">
+          <div class="cmd-sub-swatch" style="background:#2980b9"></div>
+          <span class="cmd-sub-label">Artisanal Mining</span>
+        </div>
+        <div class="cmd-sub-row" data-key="exploration">
+          <div class="cmd-sub-swatch" style="background:#e67e22"></div>
+          <span class="cmd-sub-label">Exploration License</span>
+        </div>
+        <div class="cmd-sub-row" data-key="largescale">
+          <div class="cmd-sub-swatch" style="background:#c0392b"></div>
+          <span class="cmd-sub-label">Large Scale / Mining Lease</span>
+        </div>
+        <div class="cmd-sub-row" data-key="smallscale">
+          <div class="cmd-sub-swatch" style="background:#8e44ad"></div>
+          <span class="cmd-sub-label">Small Scale</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmd-section" id="reset-section" style="display:none">
+      <button id="reset-btn" title="Clear province filter">✕ Clear Province Filter</button>
+    </div>
+  </div>
 
   <!-- ─── Concession Side Panel ─── -->
   <div id="concession-panel">
@@ -710,130 +795,75 @@ const DISTRICT_PC = {
 };
 
 // ─── Ethnic groups ───────────────────────────────────────────────────────────
+// Colors sampled directly from ethnic_map.png legend swatches
 const ETHNICITIES = {
-  'Temne':   { color: '#e07b1a', label: 'Temne'   },
-  'Mende':   { color: '#9aad2e', label: 'Mende'   },
-  'Limba':   { color: '#d6559b', label: 'Limba'   },
-  'Koranko': { color: '#5cb85c', label: 'Koranko' },
-  'Kono':    { color: '#3498db', label: 'Kono'    },
-  'Sherbro': { color: '#7d6145', label: 'Sherbro' },
-  'Susu':    { color: '#16a08c', label: 'Susu'    },
-  'Krio':    { color: '#c0392b', label: 'Krio'    },
+  'Temne':   { color: '#F0924A', label: 'Temne'   },
+  'Mende':   { color: '#C2B464', label: 'Mende'   },
+  'Limba':   { color: '#EEE36D', label: 'Limba'   },
+  'Koranko': { color: '#6CAA77', label: 'Koranko' },
+  'Kono':    { color: '#6EB8DD', label: 'Kono'    },
+  'Sherbro': { color: '#907560', label: 'Sherbro' },
+  'Susu':    { color: '#21967C', label: 'Susu'    },
+  'Krio':    { color: '#EE98A3', label: 'Krio'    },
 };
 
-// ─── Custom canvas layer: draws ethnic_map.png clipped to Sierra Leone's exact border ───
-// Uses a Leaflet managed pane (ethnicPane, z-index 350) so the canvas lives inside
-// the leaflet-map-pane CSS stacking context — same as L.ImageOverlay internally.
-// Coordinates use latLngToLayerPoint minus the canvas origin (NW corner layer-point).
-const EthnicityImageLayer = L.Layer.extend({
-  onAdd(map) {
-    this._map = map;
+// ─── Ethnic group layer — vector-based (colours the existing chiefdom polygons) ──────────
+// Each chiefdom is coloured by its dominant ethnic group using NAME_2 (district) as the
+// primary lookup and NAME_3 (chiefdom) for fine-grained overrides.  Because the same
+// GeoJSON drives both the border lines and the colour fills, the layer is guaranteed to
+// conform exactly to Sierra Leone's administrative borders — no image calibration needed.
 
-    // Create a dedicated pane between tiles (200) and the GeoJSON overlay pane (400)
-    if (!map.getPane('ethnicPane')) {
-      map.createPane('ethnicPane');
-      map.getPane('ethnicPane').style.zIndex = 350;
-      map.getPane('ethnicPane').style.pointerEvents = 'none';
-    }
+// District-level defaults  (NAME_2 → ethnic key)
+const DISTRICT_ETHNIC = {
+  'WesternUrban': 'Krio',
+  'WesternRural': 'Krio',
+  'Kambia':       'Temne',    // southern Kambia; coastal chiefdoms overridden below
+  'PortLoko':     'Temne',
+  'Tonkolili':    'Temne',
+  'Bombali':      'Temne',    // core Temne; northern chiefdoms overridden below
+  'Koinadugu':    'Koranko',
+  'Bo':           'Mende',
+  'Bonthe':       'Sherbro',
+  'Moyamba':      'Mende',
+  'Pujehun':      'Mende',
+  'Kenema':       'Mende',
+  'Kono':         'Kono',
+  'Kailahun':     'Mende',
+};
 
-    this._canvas = L.DomUtil.create('canvas', 'eth-canvas', map.getPane('ethnicPane'));
-    this._canvas.style.cssText = 'position:absolute;mix-blend-mode:multiply;pointer-events:none;';
+// Chiefdom-level overrides  (NAME_3 → ethnic key)
+// Only listed where the chiefdom's group differs from its district default above.
+const CHIEFDOM_ETHNIC = {
+  // Susu — coastal/northern Kambia
+  'Bramaia':          'Susu',
+  'Mambolo':          'Susu',
+  'Samu':             'Susu',
+  // Susu — northern Port Loko
+  'BuyaRomende':      'Susu',
+  'Dibia':            'Susu',
+  // Susu — upper Bombali (on the Kambia border)
+  'MagbembaGowahun':  'Susu',
+  // Limba — in Kambia
+  'TonkoLimba':       'Limba',
+  // Limba — in Bombali
+  'SafrokoLimba':     'Limba',
+  'SellaLimba':       'Limba',
+  'Libeisaygahun':    'Limba',
+  // Koranko — northeastern Bombali
+  'Tambakha':         'Koranko',
+  // Sherbro — coastal Moyamba chiefdoms
+  'Kagboro':          'Sherbro',
+  'Ribbi':            'Sherbro',
+  'Kori':             'Sherbro',
+};
 
-    this._img = new Image();
-    this._img.onload = () => this._reset();
-    this._img.src = 'ethnic_map.png';
+function getChiefdomEthnic(props) {
+  return CHIEFDOM_ETHNIC[props.NAME_3] || DISTRICT_ETHNIC[props.NAME_2] || null;
+}
 
-    map.on('viewreset zoom move', this._reset, this);
-    this._reset();
-  },
-  onRemove(map) {
-    L.DomUtil.remove(this._canvas);
-    map.off('viewreset zoom move', this._reset, this);
-  },
-  _reset() {
-    const map = this._map;
-    const sz  = map.getSize();
-
-    // Pin the canvas's top-left to the NW corner of the current viewport in layer-point space
-    this._origin = map.latLngToLayerPoint(map.getBounds().getNorthWest());
-    L.DomUtil.setPosition(this._canvas, this._origin);
-
-    this._canvas.width  = sz.x;
-    this._canvas.height = sz.y;
-    this._drawContent();
-  },
-  _drawContent() {
-    const map = this._map;
-    const c   = this._canvas;
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0, 0, c.width, c.height);
-    if (!this._img.complete || !allFeatures?.length) return;
-
-    const origin = this._origin;
-    // Convert a LatLng to canvas pixel coords (layer-point minus canvas origin)
-    const toPx = latLng => {
-      const lp = map.latLngToLayerPoint(latLng);
-      return [lp.x - origin.x, lp.y - origin.y];
-    };
-
-    // 1. Draw the reference ethnicity image to an off-screen canvas so we can
-    //    pixel-process it before compositing.
-    // Calibration (745×858 px image, verified by pixel sampling):
-    //   Bo     (7.96°N,-11.74°W) → pixel (373,554) ✓ olive/Mende
-    //   Makeni (8.88°N,-12.04°W) → pixel (320,387) ✓ orange/Temne
-    //   Kainkordu (8.47°N,-10.90°W) → pixel (615,369) ✓ blue/Kono
-    //   Scale: 177 px/°lon, 182 px/°lat
-    //   → full image: NW = 11.004°N –13.848°W, SE = 6.290°N –9.638°W
-    const nb = L.latLngBounds([[6.29, -13.848], [11.004, -9.638]]);
-    const [nwx, nwy] = toPx(nb.getNorthWest());
-    const [sex, sey] = toPx(nb.getSouthEast());
-
-    // Off-screen canvas: draw the raw image, then strip grayscale pixels
-    // (text labels, white ocean, legend box) by zeroing pixels whose
-    // chroma (max–min of R,G,B) is below a threshold.  Only chromatic pixels
-    // (the actual ethnic-group colour fills) survive — no printed text remains.
-    const tmp    = document.createElement('canvas');
-    tmp.width    = c.width;
-    tmp.height   = c.height;
-    const tmpCtx = tmp.getContext('2d');
-    tmpCtx.drawImage(this._img, nwx, nwy, sex - nwx, sey - nwy);
-
-    const id = tmpCtx.getImageData(0, 0, tmp.width, tmp.height);
-    const d  = id.data;
-    for (let i = 0; i < d.length; i += 4) {
-      // chroma = max(R,G,B) − min(R,G,B); near-zero means grey/white/black
-      const chroma = Math.max(d[i], d[i+1], d[i+2]) - Math.min(d[i], d[i+1], d[i+2]);
-      if (chroma < 25) d[i+3] = 0;   // transparent → removes text & background
-    }
-    tmpCtx.putImageData(id, 0, 0);
-
-    // 2. Composite the cleaned colour layer onto the main canvas
-    ctx.globalAlpha = 0.82;
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(tmp, 0, 0);
-
-    // 3. destination-in: erase everything outside Sierra Leone's chiefdom polygons
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.beginPath();
-    allFeatures.forEach(f => {
-      const geom = f.geometry;
-      (geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates).forEach(poly => {
-        poly.forEach(ring => {
-          ring.forEach((coord, i) => {
-            const [x, y] = toPx(L.latLng(coord[1], coord[0]));
-            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-          });
-          ctx.closePath();
-        });
-      });
-    });
-    ctx.fill('evenodd');
-  }
-});
-
+let chiefdomMode  = true;   // chiefdom layer visible by default
 let ethnicityMode = false;
-let ethOverlayLayer = null;
+let ethnicityLayer = null;  // independent fill-only layer, created on first toggle
 
 // GADM district names have no spaces – format them for display
 function fmtDistrict(raw) {
@@ -859,15 +889,20 @@ function getParamountChief(p) {
 // ─── Map setup ──────────────────────────────────────────────────────────────
 const map = L.map('map', { center: [8.46, -11.78], zoom: 8, zoomControl: true });
 
+const googleTileOpts = { subdomains: ['mt0','mt1','mt2','mt3'], attribution: '© Google', maxZoom: 20 };
 const baseLayers = {
-  'Light':    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                { attribution: '© CartoDB © OpenStreetMap' }),
-  'Streets':  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                { attribution: '© OpenStreetMap contributors' }),
-  'Satellite':L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                { attribution: '© Esri' }),
-  'Dark':     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                { attribution: '© CartoDB © OpenStreetMap' }),
+  'Light':          L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                      { attribution: '© CartoDB © OpenStreetMap' }),
+  'Streets':        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      { attribution: '© OpenStreetMap contributors' }),
+  'Google Maps':    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                      googleTileOpts),
+  'Google Hybrid':  L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                      googleTileOpts),
+  'Satellite':      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                      { attribution: '© Esri' }),
+  'Dark':           L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                      { attribution: '© CartoDB © OpenStreetMap' }),
 };
 baseLayers['Light'].addTo(map);
 L.control.layers(baseLayers, {}, { position: 'topright', collapsed: true }).addTo(map);
@@ -880,10 +915,10 @@ let activeProvince = null;
 // ─── Styles ─────────────────────────────────────────────────────────────────
 function featureStyle(feature, highlighted = false) {
   const prov = getProvince(feature.properties);
-  const col  = ethnicityMode ? '#888' : (PROVINCES[prov] || PROVINCES['Northern']).color;
+  const col  = (PROVINCES[prov] || PROVINCES['Northern']).color;
   return {
     fillColor:   col,
-    fillOpacity: ethnicityMode ? 0.08 : (highlighted ? 0.88 : 0.52),
+    fillOpacity: highlighted ? 0.88 : 0.52,
     color:       'rgba(255,255,255,0.65)',
     weight:      highlighted ? 2.8 : 1.3,
     dashArray:   '',
@@ -984,19 +1019,20 @@ function applyProvinceFilter(prov, toggle = true) {
     el.classList.toggle('dimmed', !!activeProvince && el.dataset.prov !== activeProvince);
   });
 
-  const resetBtn = document.getElementById('reset-btn');
-  resetBtn.style.display = activeProvince ? 'block' : 'none';
+  document.getElementById('reset-section').style.display = activeProvince ? 'block' : 'none';
 }
 
 document.getElementById('reset-btn').addEventListener('click', () => {
   activeProvince = null;
   applyProvinceFilter(null, false);
-  document.getElementById('reset-btn').style.display = 'none';
+  document.getElementById('reset-section').style.display = 'none';
 });
 
 // ─── Legend ──────────────────────────────────────────────────────────────────
+let provinceLegendCtrl = null;
+
 function buildLegend(counts) {
-  const ctrl = L.control({ position: 'bottomright' });
+  const ctrl = L.control({ position: 'bottomleft' });
   ctrl.onAdd = function() {
     const div = L.DomUtil.create('div', 'map-legend');
     div.innerHTML = '<h3>Province</h3>';
@@ -1016,6 +1052,7 @@ function buildLegend(counts) {
     return div;
   };
   ctrl.addTo(map);
+  provinceLegendCtrl = ctrl;
 }
 
 // ─── Ethnicity legend ────────────────────────────────────────────────────────
@@ -1023,7 +1060,7 @@ let ethLegendCtrl = null;
 
 function buildEthnicityLegend() {
   if (ethLegendCtrl) { ethLegendCtrl.remove(); ethLegendCtrl = null; }
-  const ctrl = L.control({ position: 'bottomright' });
+  const ctrl = L.control({ position: 'bottomleft' });
   ctrl.onAdd = function() {
     const div = L.DomUtil.create('div', 'map-legend');
     div.innerHTML = '<h3>Ethnic Group</h3>';
@@ -1042,33 +1079,52 @@ function buildEthnicityLegend() {
   ethLegendCtrl = ctrl;
 }
 
+// ─── Chiefdom layer toggle ───────────────────────────────────────────────────
+document.getElementById('chiefdom-btn').addEventListener('click', () => {
+  chiefdomMode = !chiefdomMode;
+  document.getElementById('chiefdom-btn').classList.toggle('active', chiefdomMode);
+
+  if (chiefdomMode) {
+    if (geoLayer) geoLayer.addTo(map);
+    if (!ethnicityMode) provinceLegendCtrl?.addTo(map);
+  } else {
+    if (geoLayer) geoLayer.remove();
+    provinceLegendCtrl?.remove();
+  }
+});
+
 // ─── Ethnicity toggle ────────────────────────────────────────────────────────
 document.getElementById('ethnicity-btn').addEventListener('click', () => {
   ethnicityMode = !ethnicityMode;
   document.getElementById('ethnicity-btn').classList.toggle('active', ethnicityMode);
 
   if (ethnicityMode) {
-    // Fade chiefdom fills so the overlay reads clearly
-    if (geoLayer) geoLayer.eachLayer(l => l.setStyle(featureStyle(l.feature)));
-
-    // Canvas layer: draws ethnic_map.png clipped exactly to Sierra Leone's borders.
-    ethOverlayLayer = new EthnicityImageLayer().addTo(map);
-
-    // Bring chiefdom borders to the front so they show above the overlay
-    if (geoLayer) geoLayer.bringToFront();
-
-    // Swap legend
-    document.querySelector('.map-legend')?.classList.add('hidden-legend');
+    // Build the independent ethnic fill layer the first time (reuse on subsequent toggles)
+    if (!ethnicityLayer && allFeatures.length) {
+      ethnicityLayer = L.geoJSON({ type: 'FeatureCollection', features: allFeatures }, {
+        style: f => {
+          const ethnic = getChiefdomEthnic(f.properties);
+          return {
+            fillColor:   ethnic ? ETHNICITIES[ethnic].color : '#aaaaaa',
+            fillOpacity: 0.72,
+            stroke:      false,
+            interactive: false,
+          };
+        },
+        interactive: false,
+      });
+    }
+    if (ethnicityLayer) {
+      ethnicityLayer.addTo(map);
+      if (geoLayer) geoLayer.bringToFront();  // keep borders on top
+    }
+    provinceLegendCtrl?.remove();
     buildEthnicityLegend();
 
   } else {
-    // Remove overlay
-    if (ethOverlayLayer) { ethOverlayLayer.remove(); ethOverlayLayer = null; }
-    if (ethLegendCtrl)   { ethLegendCtrl.remove();   ethLegendCtrl = null;   }
-
-    // Restore province colours
-    if (geoLayer) geoLayer.eachLayer(l => l.setStyle(featureStyle(l.feature)));
-    document.querySelector('.map-legend')?.classList.remove('hidden-legend');
+    if (ethnicityLayer) ethnicityLayer.remove();
+    if (ethLegendCtrl) { ethLegendCtrl.remove(); ethLegendCtrl = null; }
+    if (chiefdomMode) provinceLegendCtrl?.addTo(map);
     if (activeProvince) applyProvinceFilter(activeProvince, false);
   }
 });
@@ -1378,6 +1434,26 @@ const DISTRICT_SEATS_2023 = {
   'Western Area Rural': 5, 'Western Area Urban': 15,
 };
 
+// 2021 Mid-Term Population & Housing Census (Statistics Sierra Leone)
+const DISTRICT_POPULATION = {
+  'Bo':                 756975,
+  'Bombali':            387236,
+  'Bonthe':             297561,
+  'Falaba':             166205,
+  'Kailahun':           545947,
+  'Kambia':             367699,
+  'Karene':             290313,
+  'Kenema':             772472,
+  'Koinadugu':          206133,
+  'Kono':               620703,
+  'Moyamba':            346771,
+  'Port Loko':          528038,
+  'Pujehun':            429574,
+  'Tonkolili':          557257,
+  'Western Area Rural': 662056,
+  'Western Area Urban': 609174,
+};
+
 let parliamentLayer      = null;
 let parliamentLegendCtrl = null;
 let parliamentDataLoaded = false;
@@ -1406,8 +1482,9 @@ function buildParliamentLegend() {
 
 async function loadParliamentData() {
   const btn = document.getElementById('parliament-btn');
-  btn.textContent = '⏳ Loading…';
-  btn.disabled = true;
+  btn.querySelector('.cmd-label').textContent = 'Loading…';
+  btn.querySelector('.cmd-icon').textContent = '⏳';
+  btn.classList.add('loading');
 
   // District boundaries hosted in the same repo (geoBoundaries ADM2, SLE)
   const url = 'sle_districts.geojson';
@@ -1418,7 +1495,7 @@ async function loadParliamentData() {
 
     if (!map.getPane('parliamentPane')) {
       map.createPane('parliamentPane');
-      map.getPane('parliamentPane').style.zIndex = 380;
+      map.getPane('parliamentPane').style.zIndex = 420;
       map.getPane('parliamentPane').style.pointerEvents = 'auto';
     }
 
@@ -1442,6 +1519,8 @@ async function loadParliamentData() {
         const prov  = DISTRICT_PROVINCE_MAP[name] || 'Unknown';
         const col   = (PROVINCES[prov] || PROVINCES['Northern']).color;
         const seats = DISTRICT_SEATS_2023[name] || '—';
+        const pop   = DISTRICT_POPULATION[name];
+        const popFmt = pop ? pop.toLocaleString() : '—';
 
         layer.bindTooltip(`<strong>${name}</strong>`, {
           permanent: false,
@@ -1450,18 +1529,16 @@ async function loadParliamentData() {
         });
 
         layer.bindPopup(`
-          <div style="font-family:sans-serif;min-width:210px">
-            <div style="font-weight:700;font-size:15px;margin-bottom:2px;color:${col}">${name} District</div>
-            <div style="font-size:12px;color:#666;margin-bottom:10px">${(PROVINCES[prov]||PROVINCES['Northern']).label}</div>
-            <table style="width:100%;font-size:12px;border-collapse:collapse">
-              <tr><td style="color:#888;padding:3px 4px">Electoral system</td>
-                  <td style="padding:3px 4px;font-weight:600">Proportional Representation</td></tr>
-              <tr><td style="color:#888;padding:3px 4px">Parliament seats</td>
-                  <td style="padding:3px 4px;font-weight:600">${seats}</td></tr>
-              <tr><td style="color:#888;padding:3px 4px">Chief seats</td>
-                  <td style="padding:3px 4px">1 (Paramount Chief)</td></tr>
-            </table>
-            <div style="font-size:10px;color:#aaa;margin-top:8px">June 2023 General Election</div>
+          <div class="pop-header" style="background:linear-gradient(135deg,${col}cc,${col})">
+            <h3>🏛 ${name} District</h3>
+            <div class="pop-sub">${(PROVINCES[prov]||PROVINCES['Northern']).label}</div>
+          </div>
+          <div class="pop-body">
+            <div class="pop-row"><span>Population</span><span class="pl">${popFmt} <span style="color:#aaa;font-weight:400;font-size:11px">(2021 census)</span></span></div>
+            <div class="pop-row"><span>Electoral system</span><span class="pl">Proportional Representation</span></div>
+            <div class="pop-row"><span>Parliament seats</span><span class="pl">${seats}</span></div>
+            <div class="pop-row"><span>Chief seats</span><span class="pl">1 (Paramount Chief)</span></div>
+            <div style="font-size:10px;color:#aaa;margin-top:4px">June 2023 General Election</div>
           </div>
         `, { maxWidth: 280 });
 
@@ -1471,13 +1548,15 @@ async function loadParliamentData() {
     });
 
     parliamentDataLoaded = true;
-    btn.textContent = '🏛 Parliament';
-    btn.disabled = false;
+    btn.querySelector('.cmd-label').textContent = 'Parliament';
+    btn.querySelector('.cmd-icon').textContent = '🏛';
+    btn.classList.remove('loading');
     return true;
   } catch (err) {
     console.error('Parliament data load failed:', err);
-    btn.textContent = '🏛 Parliament';
-    btn.disabled = false;
+    btn.querySelector('.cmd-label').textContent = 'Parliament';
+    btn.querySelector('.cmd-icon').textContent = '🏛';
+    btn.classList.remove('loading');
     return false;
   }
 }
@@ -1518,35 +1597,34 @@ function miningTypeKey(typeStr) {
   return 'exploration';
 }
 
-let miningGeoLayer   = null;
-let miningLegendCtrl = null;
-let miningDataLoaded = false;
-let miningMode       = false;
+let miningTypeLayers  = {};   // key → L.geoJSON layer, one per MINING_TYPES key
+let miningTypeVisible = { artisanal: true, exploration: true, largescale: true, smallscale: true };
+let miningDataLoaded  = false;
+let miningMode        = false;
 
-function buildMiningLegend() {
-  const ctrl = L.control({ position: 'bottomleft' });
-  ctrl.onAdd = () => {
-    const div = L.DomUtil.create('div', 'map-legend');
-    div.innerHTML = `
-      <div class="legend-title" style="margin-bottom:4px">Mining Concessions</div>
-      <div style="font-size:10px;color:#888;margin-bottom:8px">National Minerals Agency · Sierra Leone</div>
-      ${Object.values(MINING_TYPES).map(v =>
-        `<div class="legend-item" style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${v.color};opacity:0.85;flex-shrink:0;border:1px solid rgba(0,0,0,0.2)"></span>
-          <span style="font-size:12px;color:#333">${v.label}</span>
-        </div>`
-      ).join('')}
-    `;
-    return div;
-  };
-  ctrl.addTo(map);
-  miningLegendCtrl = ctrl;
+function initMiningSubcategoryToggles() {
+  document.querySelectorAll('#mining-subs .cmd-sub-row').forEach(row => {
+    row.addEventListener('click', e => {
+      e.stopPropagation();
+      const key = row.dataset.key;
+      miningTypeVisible[key] = !miningTypeVisible[key];
+      row.classList.toggle('dimmed', !miningTypeVisible[key]);
+      if (miningTypeVisible[key]) {
+        miningTypeLayers[key]?.addTo(map);
+        if (geoLayer) geoLayer.bringToFront();
+      } else {
+        miningTypeLayers[key]?.remove();
+      }
+    });
+  });
 }
+initMiningSubcategoryToggles();
 
 async function loadMiningData() {
   const btn = document.getElementById('mining-btn');
-  btn.textContent = '⏳ Loading…';
-  btn.disabled = true;
+  btn.querySelector('.cmd-label').textContent = 'Loading…';
+  btn.querySelector('.cmd-icon').textContent = '⏳';
+  btn.classList.add('loading');
 
   const url = 'https://services8.arcgis.com/PCeCk32MjqBcahrl/arcgis/rest/services/GoSL_AllActiveLicences/FeatureServer/0/query'
     + '?where=1%3D1&outFields=Name,owner,type,status,start_date,expiry_dat,assets&f=geojson&resultRecordCount=2000';
@@ -1562,49 +1640,52 @@ async function loadMiningData() {
       map.getPane('miningPane').style.pointerEvents = 'auto';
     }
 
-    miningGeoLayer = L.geoJSON(data, {
-      pane: 'miningPane',
-      style: feat => {
-        const mt = MINING_TYPES[miningTypeKey(feat.properties.type)];
-        return { color: mt.color, weight: 1.2, fillColor: mt.color, fillOpacity: 0.38, opacity: 0.9 };
-      },
-      onEachFeature: (feat, layer) => {
-        const p = feat.properties;
-        const mt = MINING_TYPES[miningTypeKey(p.type)];
-        const fmt = d => d ? d.toString().split('T')[0] : '—';
-        layer.bindPopup(`
-          <div style="font-family:sans-serif;min-width:230px;max-width:280px">
-            <div style="font-weight:700;font-size:14px;margin-bottom:5px;color:#1b3a6e">${p.Name || '—'}</div>
-            <div style="display:inline-block;background:${mt.color};color:#fff;border-radius:10px;
-                        padding:2px 9px;font-size:11px;font-weight:600;margin-bottom:8px">${mt.label}</div>
-            <table style="width:100%;font-size:12px;border-collapse:collapse">
-              <tr><td style="color:#666;padding:2px 4px;white-space:nowrap">Owner</td>
-                  <td style="padding:2px 4px;font-weight:600">${p.owner || '—'}</td></tr>
-              <tr><td style="color:#666;padding:2px 4px">Minerals</td>
-                  <td style="padding:2px 4px">${p.assets || '—'}</td></tr>
-              <tr><td style="color:#666;padding:2px 4px">Start</td>
-                  <td style="padding:2px 4px">${fmt(p.start_date)}</td></tr>
-              <tr><td style="color:#666;padding:2px 4px">Expiry</td>
-                  <td style="padding:2px 4px">${fmt(p.expiry_dat)}</td></tr>
-              <tr><td style="color:#666;padding:2px 4px">Status</td>
-                  <td style="padding:2px 4px">${p.status || '—'}</td></tr>
-            </table>
-          </div>
-        `, { maxWidth: 300 });
+    // Bucket features by type, then build one L.geoJSON layer per type
+    const byType = { artisanal: [], exploration: [], largescale: [], smallscale: [] };
+    for (const feat of data.features) {
+      byType[miningTypeKey(feat.properties.type)].push(feat);
+    }
 
-        layer.on('mouseover', () => layer.setStyle({ weight: 2.5, fillOpacity: 0.65 }));
-        layer.on('mouseout',  () => miningGeoLayer.resetStyle(layer));
-      },
-    });
+    for (const [key, feats] of Object.entries(byType)) {
+      const mt = MINING_TYPES[key];
+      miningTypeLayers[key] = L.geoJSON(
+        { type: 'FeatureCollection', features: feats },
+        {
+          pane: 'miningPane',
+          style: () => ({ color: mt.color, weight: 1.2, fillColor: mt.color, fillOpacity: 0.38, opacity: 0.9 }),
+          onEachFeature: (feat, layer) => {
+            const p = feat.properties;
+            const fmt = d => d ? d.toString().split('T')[0] : '—';
+            layer.bindPopup(`
+              <div class="pop-header" style="background:linear-gradient(135deg,${mt.color}dd,${mt.color})">
+                <h3>⛏ ${p.Name || '—'}</h3>
+                <div class="pop-sub">${mt.label}</div>
+              </div>
+              <div class="pop-body">
+                <div class="pop-row"><span>Owner</span><span class="pl">${p.owner || '—'}</span></div>
+                <div class="pop-row"><span>Minerals</span><span class="pl">${p.assets || '—'}</span></div>
+                <div class="pop-row"><span>Start</span><span class="pl">${fmt(p.start_date)}</span></div>
+                <div class="pop-row"><span>Expiry</span><span class="pl">${fmt(p.expiry_dat)}</span></div>
+                <div class="pop-row"><span>Status</span><span class="pl">${p.status || '—'}</span></div>
+              </div>
+            `, { maxWidth: 300 });
+            layer.on('mouseover', () => layer.setStyle({ weight: 2.5, fillOpacity: 0.65 }));
+            layer.on('mouseout',  () => miningTypeLayers[key].resetStyle(layer));
+          },
+        }
+      );
+    }
 
     miningDataLoaded = true;
-    btn.textContent = '⛏ Mining Concessions';
-    btn.disabled = false;
+    btn.querySelector('.cmd-label').textContent = 'Mining Concessions';
+    btn.querySelector('.cmd-icon').textContent = '⛏';
+    btn.classList.remove('loading');
     return true;
   } catch (err) {
     console.error('Mining data load failed:', err);
-    btn.textContent = '⛏ Mining Concessions';
-    btn.disabled = false;
+    btn.querySelector('.cmd-label').textContent = 'Mining Concessions';
+    btn.querySelector('.cmd-icon').textContent = '⛏';
+    btn.classList.remove('loading');
     return false;
   }
 }
@@ -1619,12 +1700,13 @@ document.getElementById('mining-btn').addEventListener('click', async () => {
       const ok = await loadMiningData();
       if (!ok) { miningMode = false; btn.classList.remove('active'); return; }
     }
-    miningGeoLayer.addTo(map);
+    // Add only the types that are currently visible
+    for (const [key, layer] of Object.entries(miningTypeLayers)) {
+      if (miningTypeVisible[key]) layer.addTo(map);
+    }
     if (geoLayer) geoLayer.bringToFront();
-    buildMiningLegend();
   } else {
-    if (miningGeoLayer) miningGeoLayer.remove();
-    if (miningLegendCtrl) { miningLegendCtrl.remove(); miningLegendCtrl = null; }
+    for (const layer of Object.values(miningTypeLayers)) layer.remove();
   }
 });
 

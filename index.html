@@ -1029,6 +1029,8 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 });
 
 // ─── Legend ──────────────────────────────────────────────────────────────────
+let provinceLegendCtrl = null;
+
 function buildLegend(counts) {
   const ctrl = L.control({ position: 'bottomleft' });
   ctrl.onAdd = function() {
@@ -1050,6 +1052,7 @@ function buildLegend(counts) {
     return div;
   };
   ctrl.addTo(map);
+  provinceLegendCtrl = ctrl;
 }
 
 // ─── Ethnicity legend ────────────────────────────────────────────────────────
@@ -1083,8 +1086,10 @@ document.getElementById('chiefdom-btn').addEventListener('click', () => {
 
   if (chiefdomMode) {
     if (geoLayer) geoLayer.addTo(map);
+    if (!ethnicityMode) provinceLegendCtrl?.addTo(map);
   } else {
     if (geoLayer) geoLayer.remove();
+    provinceLegendCtrl?.remove();
   }
 });
 
@@ -1113,13 +1118,13 @@ document.getElementById('ethnicity-btn').addEventListener('click', () => {
       ethnicityLayer.addTo(map);
       if (geoLayer) geoLayer.bringToFront();  // keep borders on top
     }
-    document.querySelector('.map-legend')?.classList.add('hidden-legend');
+    provinceLegendCtrl?.remove();
     buildEthnicityLegend();
 
   } else {
     if (ethnicityLayer) ethnicityLayer.remove();
     if (ethLegendCtrl) { ethLegendCtrl.remove(); ethLegendCtrl = null; }
-    document.querySelector('.map-legend')?.classList.remove('hidden-legend');
+    if (chiefdomMode) provinceLegendCtrl?.addTo(map);
     if (activeProvince) applyProvinceFilter(activeProvince, false);
   }
 });
@@ -1524,20 +1529,16 @@ async function loadParliamentData() {
         });
 
         layer.bindPopup(`
-          <div style="font-family:sans-serif;min-width:210px">
-            <div style="font-weight:700;font-size:15px;margin-bottom:2px;color:${col}">${name} District</div>
-            <div style="font-size:12px;color:#666;margin-bottom:10px">${(PROVINCES[prov]||PROVINCES['Northern']).label}</div>
-            <table style="width:100%;font-size:12px;border-collapse:collapse">
-              <tr><td style="color:#888;padding:3px 4px">Population</td>
-                  <td style="padding:3px 4px;font-weight:600">${popFmt} <span style="color:#aaa;font-weight:400">(2021 census)</span></td></tr>
-              <tr><td style="color:#888;padding:3px 4px">Electoral system</td>
-                  <td style="padding:3px 4px;font-weight:600">Proportional Representation</td></tr>
-              <tr><td style="color:#888;padding:3px 4px">Parliament seats</td>
-                  <td style="padding:3px 4px;font-weight:600">${seats}</td></tr>
-              <tr><td style="color:#888;padding:3px 4px">Chief seats</td>
-                  <td style="padding:3px 4px">1 (Paramount Chief)</td></tr>
-            </table>
-            <div style="font-size:10px;color:#aaa;margin-top:8px">June 2023 General Election</div>
+          <div class="pop-header" style="background:linear-gradient(135deg,${col}cc,${col})">
+            <h3>🏛 ${name} District</h3>
+            <div class="pop-sub">${(PROVINCES[prov]||PROVINCES['Northern']).label}</div>
+          </div>
+          <div class="pop-body">
+            <div class="pop-row"><span>Population</span><span class="pl">${popFmt} <span style="color:#aaa;font-weight:400;font-size:11px">(2021 census)</span></span></div>
+            <div class="pop-row"><span>Electoral system</span><span class="pl">Proportional Representation</span></div>
+            <div class="pop-row"><span>Parliament seats</span><span class="pl">${seats}</span></div>
+            <div class="pop-row"><span>Chief seats</span><span class="pl">1 (Paramount Chief)</span></div>
+            <div style="font-size:10px;color:#aaa;margin-top:4px">June 2023 General Election</div>
           </div>
         `, { maxWidth: 280 });
 
@@ -1656,22 +1657,16 @@ async function loadMiningData() {
             const p = feat.properties;
             const fmt = d => d ? d.toString().split('T')[0] : '—';
             layer.bindPopup(`
-              <div style="font-family:sans-serif;min-width:230px;max-width:280px">
-                <div style="font-weight:700;font-size:14px;margin-bottom:5px;color:#1b3a6e">${p.Name || '—'}</div>
-                <div style="display:inline-block;background:${mt.color};color:#fff;border-radius:10px;
-                            padding:2px 9px;font-size:11px;font-weight:600;margin-bottom:8px">${mt.label}</div>
-                <table style="width:100%;font-size:12px;border-collapse:collapse">
-                  <tr><td style="color:#666;padding:2px 4px;white-space:nowrap">Owner</td>
-                      <td style="padding:2px 4px;font-weight:600">${p.owner || '—'}</td></tr>
-                  <tr><td style="color:#666;padding:2px 4px">Minerals</td>
-                      <td style="padding:2px 4px">${p.assets || '—'}</td></tr>
-                  <tr><td style="color:#666;padding:2px 4px">Start</td>
-                      <td style="padding:2px 4px">${fmt(p.start_date)}</td></tr>
-                  <tr><td style="color:#666;padding:2px 4px">Expiry</td>
-                      <td style="padding:2px 4px">${fmt(p.expiry_dat)}</td></tr>
-                  <tr><td style="color:#666;padding:2px 4px">Status</td>
-                      <td style="padding:2px 4px">${p.status || '—'}</td></tr>
-                </table>
+              <div class="pop-header" style="background:linear-gradient(135deg,${mt.color}dd,${mt.color})">
+                <h3>⛏ ${p.Name || '—'}</h3>
+                <div class="pop-sub">${mt.label}</div>
+              </div>
+              <div class="pop-body">
+                <div class="pop-row"><span>Owner</span><span class="pl">${p.owner || '—'}</span></div>
+                <div class="pop-row"><span>Minerals</span><span class="pl">${p.assets || '—'}</span></div>
+                <div class="pop-row"><span>Start</span><span class="pl">${fmt(p.start_date)}</span></div>
+                <div class="pop-row"><span>Expiry</span><span class="pl">${fmt(p.expiry_dat)}</span></div>
+                <div class="pop-row"><span>Status</span><span class="pl">${p.status || '—'}</span></div>
               </div>
             `, { maxWidth: 300 });
             layer.on('mouseover', () => layer.setStyle({ weight: 2.5, fillOpacity: 0.65 }));
