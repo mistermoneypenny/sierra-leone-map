@@ -1108,8 +1108,14 @@ document.getElementById('ethnicity-btn').addEventListener('click', () => {
   document.getElementById('ethnicity-btn').classList.toggle('active', ethnicityMode);
 
   if (ethnicityMode) {
-    // Colour each chiefdom polygon by its ethnic group
-    if (geoLayer) geoLayer.eachLayer(l => l.setStyle(featureStyle(l.feature)));
+    // Ensure the chiefdom layer is visible (ethnicity colours live on it)
+    if (!chiefdomMode) {
+      chiefdomMode = true;
+      document.getElementById('chiefdom-btn').classList.add('active');
+      if (geoLayer) geoLayer.addTo(map);
+    }
+    // Recolour every chiefdom polygon by ethnic group using Leaflet's reset API
+    if (geoLayer) geoLayer.eachLayer(l => geoLayer.resetStyle(l));
 
     // Swap legend
     document.querySelector('.map-legend')?.classList.add('hidden-legend');
@@ -1119,7 +1125,7 @@ document.getElementById('ethnicity-btn').addEventListener('click', () => {
     if (ethLegendCtrl) { ethLegendCtrl.remove(); ethLegendCtrl = null; }
 
     // Restore province colours
-    if (geoLayer) geoLayer.eachLayer(l => l.setStyle(featureStyle(l.feature)));
+    if (geoLayer) geoLayer.eachLayer(l => geoLayer.resetStyle(l));
     document.querySelector('.map-legend')?.classList.remove('hidden-legend');
     if (activeProvince) applyProvinceFilter(activeProvince, false);
   }
