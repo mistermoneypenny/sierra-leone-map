@@ -829,15 +829,20 @@ function getParamountChief(p) {
 // ─── Map setup ──────────────────────────────────────────────────────────────
 const map = L.map('map', { center: [8.46, -11.78], zoom: 8, zoomControl: true });
 
+const googleTileOpts = { subdomains: ['mt0','mt1','mt2','mt3'], attribution: '© Google', maxZoom: 20 };
 const baseLayers = {
-  'Light':    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                { attribution: '© CartoDB © OpenStreetMap' }),
-  'Streets':  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                { attribution: '© OpenStreetMap contributors' }),
-  'Satellite':L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                { attribution: '© Esri' }),
-  'Dark':     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                { attribution: '© CartoDB © OpenStreetMap' }),
+  'Light':          L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                      { attribution: '© CartoDB © OpenStreetMap' }),
+  'Streets':        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      { attribution: '© OpenStreetMap contributors' }),
+  'Google Maps':    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                      googleTileOpts),
+  'Google Hybrid':  L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+                      googleTileOpts),
+  'Satellite':      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                      { attribution: '© Esri' }),
+  'Dark':           L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                      { attribution: '© CartoDB © OpenStreetMap' }),
 };
 baseLayers['Light'].addTo(map);
 L.control.layers(baseLayers, {}, { position: 'topright', collapsed: true }).addTo(map);
