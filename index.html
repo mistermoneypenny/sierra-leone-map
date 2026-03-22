@@ -664,6 +664,11 @@
         <span class="cmd-label">Chiefdoms</span>
         <div class="cmd-pill"></div>
       </div>
+      <div class="cmd-row" id="district-btn" title="Toggle district boundaries">
+        <span class="cmd-icon">🗺</span>
+        <span class="cmd-label">Districts</span>
+        <div class="cmd-pill"></div>
+      </div>
       <div class="cmd-row" id="ethnicity-btn" title="Toggle ethnic group layer">
         <span class="cmd-icon">🎨</span>
         <span class="cmd-label">Ethnicity</span>
@@ -1429,6 +1434,10 @@ const DISTRICT_SEATS_2023 = {
   'Western Area Rural': 5, 'Western Area Urban': 15,
 };
 
+let districtLayer      = null;
+let districtDataLoaded = false;
+let districtMode       = false;
+
 let parliamentLayer      = null;
 let parliamentLegendCtrl = null;
 let parliamentDataLoaded = false;
@@ -1454,6 +1463,82 @@ function buildParliamentLegend() {
   ctrl.addTo(map);
   parliamentLegendCtrl = ctrl;
 }
+
+// ─── District layer ──────────────────────────────────────────────────────────
+async function loadDistrictData() {
+  const btn = document.getElementById('district-btn');
+  btn.querySelector('.cmd-label').textContent = 'Loading…';
+  btn.querySelector('.cmd-icon').textContent = '⏳';
+  btn.classList.add('loading');
+
+  try {
+    const resp = await fetch('sle_districts.geojson');
+    const data = await resp.json();
+
+    if (!map.getPane('districtPane')) {
+      map.createPane('districtPane');
+      map.getPane('districtPane').style.zIndex = 390;   // above ethnic fill, below chiefdoms
+      map.getPane('districtPane').style.pointerEvents = 'auto';
+    }
+
+    districtLayer = L.geoJSON(data, {
+      pane: 'districtPane',
+      style: feat => {
+        const name = feat.properties.shapeName;
+        const prov = DISTRICT_PROVINCE_MAP[name] || 'Northern';
+        const col  = (PROVINCES[prov] || PROVINCES['Northern']).color;
+        return { color: col, weight: 3, opacity: 1, fillOpacity: 0, dashArray: '' };
+      },
+      onEachFeature: (feat, layer) => {
+        const name = feat.properties.shapeName;
+        const prov = DISTRICT_PROVINCE_MAP[name] || 'Northern';
+        const col  = (PROVINCES[prov] || PROVINCES['Northern']).color;
+        layer.bindTooltip(`<strong>${name} District</strong>`, {
+          sticky: true, className: 'chiefdom-tip', direction: 'top', offset: [0, -4],
+        });
+        layer.on('click', e => {
+          L.popup({ maxWidth: 240 })
+            .setLatLng(e.latlng)
+            .setContent(`
+              <div class="pop-header" style="background:${col}">
+                <h3>${name} District</h3>
+                <div class="pop-sub">${(PROVINCES[prov]||PROVINCES['Northern']).label} Province · Sierra Leone</div>
+              </div>`)
+            .openOn(map);
+        });
+      },
+    });
+
+    districtDataLoaded = true;
+    btn.querySelector('.cmd-label').textContent = 'Districts';
+    btn.querySelector('.cmd-icon').textContent = '🗺';
+    btn.classList.remove('loading');
+    return true;
+  } catch (err) {
+    console.error('District data load failed:', err);
+    btn.querySelector('.cmd-label').textContent = 'Districts';
+    btn.querySelector('.cmd-icon').textContent = '🗺';
+    btn.classList.remove('loading');
+    return false;
+  }
+}
+
+document.getElementById('district-btn').addEventListener('click', async () => {
+  districtMode = !districtMode;
+  const btn = document.getElementById('district-btn');
+  btn.classList.toggle('active', districtMode);
+
+  if (districtMode) {
+    if (!districtDataLoaded) {
+      const ok = await loadDistrictData();
+      if (!ok) { districtMode = false; btn.classList.remove('active'); return; }
+    }
+    districtLayer.addTo(map);
+    if (geoLayer) geoLayer.bringToFront();
+  } else {
+    if (districtLayer) districtLayer.remove();
+  }
+});
 
 async function loadParliamentData() {
   const btn = document.getElementById('parliament-btn');
