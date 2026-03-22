@@ -1434,6 +1434,26 @@ const DISTRICT_SEATS_2023 = {
   'Western Area Rural': 5, 'Western Area Urban': 15,
 };
 
+// 2021 Mid-Term Population & Housing Census (Statistics Sierra Leone)
+const DISTRICT_POPULATION = {
+  'Bo':                 756975,
+  'Bombali':            387236,
+  'Bonthe':             297561,
+  'Falaba':             166205,
+  'Kailahun':           545947,
+  'Kambia':             367699,
+  'Karene':             290313,
+  'Kenema':             772472,
+  'Koinadugu':          206133,
+  'Kono':               620703,
+  'Moyamba':            346771,
+  'Port Loko':          528038,
+  'Pujehun':            429574,
+  'Tonkolili':          557257,
+  'Western Area Rural': 662056,
+  'Western Area Urban': 609174,
+};
+
 let districtLayer      = null;
 let districtDataLoaded = false;
 let districtMode       = false;
@@ -1490,22 +1510,31 @@ async function loadDistrictData() {
         return { color: col, weight: 3, opacity: 1, fillOpacity: 0, dashArray: '' };
       },
       onEachFeature: (feat, layer) => {
-        const name = feat.properties.shapeName;
-        const prov = DISTRICT_PROVINCE_MAP[name] || 'Northern';
-        const col  = (PROVINCES[prov] || PROVINCES['Northern']).color;
-        layer.bindTooltip(`<strong>${name} District</strong>`, {
-          sticky: true, className: 'chiefdom-tip', direction: 'top', offset: [0, -4],
+        const name   = feat.properties.shapeName;
+        const prov   = DISTRICT_PROVINCE_MAP[name] || 'Northern';
+        const col    = (PROVINCES[prov] || PROVINCES['Northern']).color;
+        const pop    = DISTRICT_POPULATION[name];
+        const popFmt = pop ? pop.toLocaleString() : '—';
+
+        layer.bindTooltip(`<strong>${name}</strong>`, {
+          permanent: false, className: 'chiefdom-tip', direction: 'center',
         });
-        layer.on('click', e => {
-          L.popup({ maxWidth: 240 })
-            .setLatLng(e.latlng)
-            .setContent(`
-              <div class="pop-header" style="background:${col}">
-                <h3>${name} District</h3>
-                <div class="pop-sub">${(PROVINCES[prov]||PROVINCES['Northern']).label} Province · Sierra Leone</div>
-              </div>`)
-            .openOn(map);
-        });
+
+        layer.bindPopup(`
+          <div style="font-family:sans-serif;min-width:210px">
+            <div style="font-weight:700;font-size:15px;margin-bottom:2px;color:${col}">${name} District</div>
+            <div style="font-size:12px;color:#666;margin-bottom:10px">${(PROVINCES[prov]||PROVINCES['Northern']).label} Province</div>
+            <table style="width:100%;font-size:12px;border-collapse:collapse">
+              <tr><td style="color:#888;padding:3px 4px">Population</td>
+                  <td style="padding:3px 4px;font-weight:600">${popFmt} <span style="color:#aaa;font-weight:400">(2021 census)</span></td></tr>
+              <tr><td style="color:#888;padding:3px 4px">Chiefdoms</td>
+                  <td style="padding:3px 4px;font-weight:600">${DISTRICT_SEATS_2023[name] ? DISTRICT_SEATS_2023[name] + ' parl. seats' : '—'}</td></tr>
+            </table>
+          </div>
+        `, { maxWidth: 260 });
+
+        layer.on('mouseover', () => layer.setStyle({ weight: 5, fillColor: col, fillOpacity: 0.18 }));
+        layer.on('mouseout',  () => districtLayer.resetStyle(layer));
       },
     });
 
@@ -1579,6 +1608,8 @@ async function loadParliamentData() {
         const prov  = DISTRICT_PROVINCE_MAP[name] || 'Unknown';
         const col   = (PROVINCES[prov] || PROVINCES['Northern']).color;
         const seats = DISTRICT_SEATS_2023[name] || '—';
+        const pop   = DISTRICT_POPULATION[name];
+        const popFmt = pop ? pop.toLocaleString() : '—';
 
         layer.bindTooltip(`<strong>${name}</strong>`, {
           permanent: false,
@@ -1591,6 +1622,8 @@ async function loadParliamentData() {
             <div style="font-weight:700;font-size:15px;margin-bottom:2px;color:${col}">${name} District</div>
             <div style="font-size:12px;color:#666;margin-bottom:10px">${(PROVINCES[prov]||PROVINCES['Northern']).label}</div>
             <table style="width:100%;font-size:12px;border-collapse:collapse">
+              <tr><td style="color:#888;padding:3px 4px">Population</td>
+                  <td style="padding:3px 4px;font-weight:600">${popFmt} <span style="color:#aaa;font-weight:400">(2021 census)</span></td></tr>
               <tr><td style="color:#888;padding:3px 4px">Electoral system</td>
                   <td style="padding:3px 4px;font-weight:600">Proportional Representation</td></tr>
               <tr><td style="color:#888;padding:3px 4px">Parliament seats</td>
