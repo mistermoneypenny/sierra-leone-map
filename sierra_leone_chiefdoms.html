@@ -703,6 +703,33 @@
       </div>
     </div>
 
+    <div class="cmd-section">
+      <div class="cmd-section-label">Environment</div>
+      <div class="cmd-row" id="rivers-btn" title="Toggle major rivers and waterways">
+        <span class="cmd-icon">🌊</span><span class="cmd-label">Rivers</span><div class="cmd-pill"></div>
+      </div>
+      <div class="cmd-row" id="protected-btn" title="Toggle protected areas and nature reserves">
+        <span class="cmd-icon">🌿</span><span class="cmd-label">Protected Areas</span><div class="cmd-pill"></div>
+      </div>
+      <div class="cmd-row" id="forest-btn" title="Toggle forest cover (≥30% canopy density)">
+        <span class="cmd-icon">🌳</span><span class="cmd-label">Forest Cover</span><div class="cmd-pill"></div>
+      </div>
+    </div>
+
+    <div class="cmd-section">
+      <div class="cmd-section-label">Infrastructure</div>
+      <div class="cmd-row" id="roads-btn" title="Toggle trunk, primary and secondary roads">
+        <span class="cmd-icon">🛣</span><span class="cmd-label">Roads</span><div class="cmd-pill"></div>
+      </div>
+    </div>
+
+    <div class="cmd-section">
+      <div class="cmd-section-label">Geology</div>
+      <div class="cmd-row" id="geology-btn" title="Toggle bedrock geological units (OneGeology / BGS)">
+        <span class="cmd-icon">🪨</span><span class="cmd-label">Geological Units</span><div class="cmd-pill"></div>
+      </div>
+    </div>
+
     <div class="cmd-section" id="reset-section" style="display:none">
       <button id="reset-btn" title="Clear province filter">✕ Clear Province Filter</button>
     </div>
@@ -1707,6 +1734,292 @@ document.getElementById('mining-btn').addEventListener('click', async () => {
     if (geoLayer) geoLayer.bringToFront();
   } else {
     for (const layer of Object.values(miningTypeLayers)) layer.remove();
+  }
+});
+
+// ─── Overpass API helper ──────────────────────────────────────────────────────
+async function fetchOverpass(query) {
+  const resp = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: 'data=' + encodeURIComponent(query),
+  });
+  if (!resp.ok) throw new Error('Overpass error ' + resp.status);
+  return resp.json();
+}
+
+function overpassWaysToGeoJSON(elements) {
+  return {
+    type: 'FeatureCollection',
+    features: elements
+      .filter(el => el.type === 'way' && el.geometry && el.geometry.length > 1)
+      .map(el => {
+        const coords = el.geometry.map(p => [p.lon, p.lat]);
+        const closed = coords.length > 3 &&
+          coords[0][0] === coords[coords.length - 1][0] &&
+          coords[0][1] === coords[coords.length - 1][1];
+        return {
+          type: 'Feature',
+          geometry: {
+            type: closed ? 'Polygon' : 'LineString',
+            coordinates: closed ? [coords] : coords,
+          },
+          properties: el.tags || {},
+        };
+      }),
+  };
+}
+
+// ─── Rivers Layer ─────────────────────────────────────────────────────────────
+let riversLayer = null, riversMode = false, riversDataLoaded = false;
+
+async function loadRiversData() {
+  const btn = document.getElementById('rivers-btn');
+  btn.classList.add('loading');
+  btn.querySelector('.cmd-label').textContent = 'Loading…';
+  try {
+    if (!map.getPane('riversPane')) {
+      map.createPane('riversPane');
+      map.getPane('riversPane').style.zIndex = 350;
+    }
+    const data = await fetchOverpass(
+      `[out:json][timeout:60][bbox:6.855,-13.49,10.0,-10.27];
+       way[waterway~"^(river|stream)$"][name];
+       out geom;`
+    );
+    const gj = overpassWaysToGeoJSON(data.elements);
+    riversLayer = L.geoJSON(gj, {
+      pane: 'riversPane',
+      style: f => {
+        const isRiver = f.properties.waterway === 'river';
+        return { color: isRiver ? '#1a6fa8' : '#5dade2', weight: isRiver ? 2.5 : 1.2, opacity: 0.85, fill: false };
+      },
+      onEachFeature: (feat, layer) => {
+        if (feat.properties.name) {
+          layer.bindTooltip(feat.properties.name, { sticky: true, className: 'chiefdom-tip' });
+        }
+      },
+    });
+    riversDataLoaded = true;
+    btn.querySelector('.cmd-label').textContent = 'Rivers';
+    btn.querySelector('.cmd-icon').textContent = '🌊';
+    btn.classList.remove('loading');
+    return true;
+  } catch (err) {
+    console.error('Rivers load failed:', err);
+    btn.querySelector('.cmd-label').textContent = 'Rivers';
+    btn.querySelector('.cmd-icon').textContent = '🌊';
+    btn.classList.remove('loading');
+    return false;
+  }
+}
+
+document.getElementById('rivers-btn').addEventListener('click', async () => {
+  riversMode = !riversMode;
+  const btn = document.getElementById('rivers-btn');
+  btn.classList.toggle('active', riversMode);
+  if (riversMode) {
+    if (!riversDataLoaded) {
+      const ok = await loadRiversData();
+      if (!ok) { riversMode = false; btn.classList.remove('active'); return; }
+    }
+    riversLayer.addTo(map);
+    if (geoLayer) geoLayer.bringToFront();
+  } else {
+    if (riversLayer) riversLayer.remove();
+  }
+});
+
+// ─── Roads Layer ──────────────────────────────────────────────────────────────
+let roadsLayer = null, roadsMode = false, roadsDataLoaded = false;
+
+async function loadRoadsData() {
+  const btn = document.getElementById('roads-btn');
+  btn.classList.add('loading');
+  btn.querySelector('.cmd-label').textContent = 'Loading…';
+  try {
+    if (!map.getPane('roadsPane')) {
+      map.createPane('roadsPane');
+      map.getPane('roadsPane').style.zIndex = 340;
+    }
+    const data = await fetchOverpass(
+      `[out:json][timeout:60][bbox:6.855,-13.49,10.0,-10.27];
+       way[highway~"^(trunk|primary|secondary)$"];
+       out geom;`
+    );
+    const gj = overpassWaysToGeoJSON(data.elements);
+    roadsLayer = L.geoJSON(gj, {
+      pane: 'roadsPane',
+      style: f => {
+        const hw = f.properties.highway;
+        return {
+          color:   hw === 'trunk' ? '#c0392b' : hw === 'primary' ? '#e67e22' : '#f1c40f',
+          weight:  hw === 'trunk' ? 3 : hw === 'primary' ? 2 : 1.5,
+          opacity: 0.8,
+          fill: false,
+        };
+      },
+      onEachFeature: (feat, layer) => {
+        const label = feat.properties.name || feat.properties.ref;
+        if (label) layer.bindTooltip(label, { sticky: true, className: 'chiefdom-tip' });
+      },
+    });
+    roadsDataLoaded = true;
+    btn.querySelector('.cmd-label').textContent = 'Roads';
+    btn.querySelector('.cmd-icon').textContent = '🛣';
+    btn.classList.remove('loading');
+    return true;
+  } catch (err) {
+    console.error('Roads load failed:', err);
+    btn.querySelector('.cmd-label').textContent = 'Roads';
+    btn.querySelector('.cmd-icon').textContent = '🛣';
+    btn.classList.remove('loading');
+    return false;
+  }
+}
+
+document.getElementById('roads-btn').addEventListener('click', async () => {
+  roadsMode = !roadsMode;
+  const btn = document.getElementById('roads-btn');
+  btn.classList.toggle('active', roadsMode);
+  if (roadsMode) {
+    if (!roadsDataLoaded) {
+      const ok = await loadRoadsData();
+      if (!ok) { roadsMode = false; btn.classList.remove('active'); return; }
+    }
+    roadsLayer.addTo(map);
+    if (geoLayer) geoLayer.bringToFront();
+  } else {
+    if (roadsLayer) roadsLayer.remove();
+  }
+});
+
+// ─── Protected Areas Layer ────────────────────────────────────────────────────
+let protectedLayer = null, protectedMode = false, protectedDataLoaded = false;
+
+async function loadProtectedData() {
+  const btn = document.getElementById('protected-btn');
+  btn.classList.add('loading');
+  btn.querySelector('.cmd-label').textContent = 'Loading…';
+  try {
+    if (!map.getPane('protectedPane')) {
+      map.createPane('protectedPane');
+      map.getPane('protectedPane').style.zIndex = 360;
+    }
+    const data = await fetchOverpass(
+      `[out:json][timeout:60][bbox:6.855,-13.49,10.0,-10.27];
+       (way[boundary=protected_area];way[leisure=nature_reserve];way[protect_class];);
+       out geom;`
+    );
+    const gj = overpassWaysToGeoJSON(data.elements);
+    protectedLayer = L.geoJSON(gj, {
+      pane: 'protectedPane',
+      style: () => ({
+        fillColor: '#27ae60', fillOpacity: 0.22,
+        color: '#1e8449', weight: 1.5, dashArray: '6,4', opacity: 0.9,
+      }),
+      onEachFeature: (feat, layer) => {
+        const p = feat.properties;
+        const name = p.name || 'Protected Area';
+        const type = p.boundary || p.leisure || 'Nature Reserve';
+        layer.bindPopup(`
+          <div class="pop-header" style="background:linear-gradient(135deg,#1e8449,#27ae60)">
+            <h3>🌿 ${name}</h3>
+            <div class="pop-sub">${type.replace(/_/g, ' ')}</div>
+          </div>
+          <div class="pop-body">
+            ${p.protect_class ? `<div class="pop-row"><span>Protect class</span><span class="pl">${p.protect_class}</span></div>` : ''}
+            ${p.designation  ? `<div class="pop-row"><span>Designation</span><span class="pl">${p.designation.replace(/_/g,' ')}</span></div>` : ''}
+            ${p.operator     ? `<div class="pop-row"><span>Operator</span><span class="pl">${p.operator}</span></div>` : ''}
+          </div>
+        `, { maxWidth: 280 });
+        layer.bindTooltip(name, { sticky: true, className: 'chiefdom-tip' });
+      },
+    });
+    protectedDataLoaded = true;
+    btn.querySelector('.cmd-label').textContent = 'Protected Areas';
+    btn.querySelector('.cmd-icon').textContent = '🌿';
+    btn.classList.remove('loading');
+    return true;
+  } catch (err) {
+    console.error('Protected areas load failed:', err);
+    btn.querySelector('.cmd-label').textContent = 'Protected Areas';
+    btn.querySelector('.cmd-icon').textContent = '🌿';
+    btn.classList.remove('loading');
+    return false;
+  }
+}
+
+document.getElementById('protected-btn').addEventListener('click', async () => {
+  protectedMode = !protectedMode;
+  const btn = document.getElementById('protected-btn');
+  btn.classList.toggle('active', protectedMode);
+  if (protectedMode) {
+    if (!protectedDataLoaded) {
+      const ok = await loadProtectedData();
+      if (!ok) { protectedMode = false; btn.classList.remove('active'); return; }
+    }
+    protectedLayer.addTo(map);
+    if (geoLayer) geoLayer.bringToFront();
+  } else {
+    if (protectedLayer) protectedLayer.remove();
+  }
+});
+
+// ─── Forest Cover Layer (GFW tile) ────────────────────────────────────────────
+let forestLayer = null, forestMode = false;
+
+document.getElementById('forest-btn').addEventListener('click', () => {
+  forestMode = !forestMode;
+  document.getElementById('forest-btn').classList.toggle('active', forestMode);
+  if (forestMode) {
+    if (!forestLayer) {
+      if (!map.getPane('forestPane')) {
+        map.createPane('forestPane');
+        map.getPane('forestPane').style.zIndex = 300;
+      }
+      forestLayer = L.tileLayer(
+        'https://tiles.globalforestwatch.org/umd_tree_cover_loss/v1.8/tcd_30/{z}/{x}/{y}.png',
+        {
+          pane:        'forestPane',
+          opacity:     0.7,
+          attribution: '© Global Forest Watch / Hansen/UMD/Google/USGS/NASA',
+          maxZoom:     19,
+        }
+      );
+    }
+    forestLayer.addTo(map);
+    if (geoLayer) geoLayer.bringToFront();
+  } else {
+    if (forestLayer) forestLayer.remove();
+  }
+});
+
+// ─── Geological Units Layer (WMS) ─────────────────────────────────────────────
+let geologyLayer = null, geologyMode = false;
+
+document.getElementById('geology-btn').addEventListener('click', () => {
+  geologyMode = !geologyMode;
+  document.getElementById('geology-btn').classList.toggle('active', geologyMode);
+  if (geologyMode) {
+    if (!geologyLayer) {
+      if (!map.getPane('geologyPane')) {
+        map.createPane('geologyPane');
+        map.getPane('geologyPane').style.zIndex = 290;
+      }
+      geologyLayer = L.tileLayer.wms('https://map.onegeology.org/wms', {
+        pane:        'geologyPane',
+        layers:      'BGS_GCFR_Bedrock_and_Structural_Geology',
+        format:      'image/png',
+        transparent: true,
+        version:     '1.3.0',
+        opacity:     0.65,
+        attribution: '© OneGeology / BGS',
+      });
+    }
+    geologyLayer.addTo(map);
+    if (geoLayer) geoLayer.bringToFront();
+  } else {
+    if (geologyLayer) geologyLayer.remove();
   }
 });
 
