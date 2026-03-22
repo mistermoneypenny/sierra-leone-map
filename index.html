@@ -294,6 +294,28 @@
       margin-top: 2px;
     }
 
+    /* ─── Chiefdom layer toggle button ─── */
+    #chiefdom-btn {
+      position: absolute;
+      bottom: 192px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      border: 1.5px solid #4a5568;
+      color: #4a5568;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      z-index: 1000;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      transition: background 0.15s, color 0.15s;
+    }
+    #chiefdom-btn:hover { background: #f0f2f5; }
+    #chiefdom-btn.active { background: #4a5568; color: #fff; }
+
     /* ─── Ethnicity toggle button ─── */
     #ethnicity-btn {
       position: absolute;
@@ -618,6 +640,7 @@
     <div class="stat-row"><span>Chiefdoms</span><span class="num" id="total-count">—</span></div>
   </div>
 
+  <button id="chiefdom-btn" class="active" title="Toggle paramount chiefdom boundaries">🗾 Chiefdoms</button>
   <button id="parliament-btn" title="Toggle parliamentary constituency boundaries">🏛 Parliament</button>
   <button id="mining-btn" title="Toggle mining concessions layer">⛏ Mining Concessions</button>
   <button id="ethnicity-btn" title="Toggle ethnic group layer">🗺 Ethnicity Layer</button>
@@ -775,6 +798,7 @@ function getChiefdomEthnic(props) {
   return CHIEFDOM_ETHNIC[props.NAME_3] || DISTRICT_ETHNIC[props.NAME_2] || null;
 }
 
+let chiefdomMode  = true;   // chiefdom layer visible by default
 let ethnicityMode = false;
 
 // GADM district names have no spaces – format them for display
@@ -991,6 +1015,25 @@ function buildEthnicityLegend() {
   ctrl.addTo(map);
   ethLegendCtrl = ctrl;
 }
+
+// ─── Chiefdom layer toggle ───────────────────────────────────────────────────
+document.getElementById('chiefdom-btn').addEventListener('click', () => {
+  chiefdomMode = !chiefdomMode;
+  document.getElementById('chiefdom-btn').classList.toggle('active', chiefdomMode);
+
+  if (chiefdomMode) {
+    if (geoLayer) geoLayer.addTo(map);
+  } else {
+    // If ethnicity mode is on, turn it off first (it lives on the chiefdom layer)
+    if (ethnicityMode) {
+      ethnicityMode = false;
+      document.getElementById('ethnicity-btn').classList.remove('active');
+      if (ethLegendCtrl) { ethLegendCtrl.remove(); ethLegendCtrl = null; }
+      document.querySelector('.map-legend')?.classList.remove('hidden-legend');
+    }
+    if (geoLayer) geoLayer.remove();
+  }
+});
 
 // ─── Ethnicity toggle ────────────────────────────────────────────────────────
 document.getElementById('ethnicity-btn').addEventListener('click', () => {
