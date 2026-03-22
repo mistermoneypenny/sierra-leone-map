@@ -1037,7 +1037,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 
 // ─── Legend ──────────────────────────────────────────────────────────────────
 function buildLegend(counts) {
-  const ctrl = L.control({ position: 'bottomright' });
+  const ctrl = L.control({ position: 'bottomleft' });
   ctrl.onAdd = function() {
     const div = L.DomUtil.create('div', 'map-legend');
     div.innerHTML = '<h3>Province</h3>';
@@ -1064,7 +1064,7 @@ let ethLegendCtrl = null;
 
 function buildEthnicityLegend() {
   if (ethLegendCtrl) { ethLegendCtrl.remove(); ethLegendCtrl = null; }
-  const ctrl = L.control({ position: 'bottomright' });
+  const ctrl = L.control({ position: 'bottomleft' });
   ctrl.onAdd = function() {
     const div = L.DomUtil.create('div', 'map-legend');
     div.innerHTML = '<h3>Ethnic Group</h3>';
