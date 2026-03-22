@@ -776,22 +776,43 @@ const EthnicityImageLayer = L.Layer.extend({
       return [lp.x - origin.x, lp.y - origin.y];
     };
 
-    // 1. Draw the reference ethnicity image stretched to its calibrated geographic extent.
-    // Pixel-sampled calibration on the 745×858 image:
-    //   Bo     (7.96°N,-11.74°W) → pixel (373,554) ✓ olive confirmed
-    //   Makeni (8.88°N,-12.04°W) → pixel (320,387) ✓ orange confirmed
-    //   Kabala (9.58°N,-11.86°W) → pixel (352,261) ✓ pink confirmed
-    //   Scale: 177px/°lon, 182px/°lat  (verified across all three anchors)
-    //   → NW corner = 7.96 + 554/182 = 11.004°N,  -11.74 - 373/177 = -13.848°W
-    //   → SE corner = 11.004 - 858/182 = 6.290°N,  -13.848 + 745/177 = -9.638°W
+    // 1. Draw the reference ethnicity image to an off-screen canvas so we can
+    //    pixel-process it before compositing.
+    // Calibration (745×858 px image, verified by pixel sampling):
+    //   Bo     (7.96°N,-11.74°W) → pixel (373,554) ✓ olive/Mende
+    //   Makeni (8.88°N,-12.04°W) → pixel (320,387) ✓ orange/Temne
+    //   Kainkordu (8.47°N,-10.90°W) → pixel (615,369) ✓ blue/Kono
+    //   Scale: 177 px/°lon, 182 px/°lat
+    //   → full image: NW = 11.004°N –13.848°W, SE = 6.290°N –9.638°W
     const nb = L.latLngBounds([[6.29, -13.848], [11.004, -9.638]]);
     const [nwx, nwy] = toPx(nb.getNorthWest());
     const [sex, sey] = toPx(nb.getSouthEast());
+
+    // Off-screen canvas: draw the raw image, then strip grayscale pixels
+    // (text labels, white ocean, legend box) by zeroing pixels whose
+    // chroma (max–min of R,G,B) is below a threshold.  Only chromatic pixels
+    // (the actual ethnic-group colour fills) survive — no printed text remains.
+    const tmp    = document.createElement('canvas');
+    tmp.width    = c.width;
+    tmp.height   = c.height;
+    const tmpCtx = tmp.getContext('2d');
+    tmpCtx.drawImage(this._img, nwx, nwy, sex - nwx, sey - nwy);
+
+    const id = tmpCtx.getImageData(0, 0, tmp.width, tmp.height);
+    const d  = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      // chroma = max(R,G,B) − min(R,G,B); near-zero means grey/white/black
+      const chroma = Math.max(d[i], d[i+1], d[i+2]) - Math.min(d[i], d[i+1], d[i+2]);
+      if (chroma < 25) d[i+3] = 0;   // transparent → removes text & background
+    }
+    tmpCtx.putImageData(id, 0, 0);
+
+    // 2. Composite the cleaned colour layer onto the main canvas
     ctx.globalAlpha = 0.82;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(this._img, nwx, nwy, sex - nwx, sey - nwy);
+    ctx.drawImage(tmp, 0, 0);
 
-    // 2. destination-in: erase everything outside Sierra Leone's chiefdom polygons
+    // 3. destination-in: erase everything outside Sierra Leone's chiefdom polygons
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'destination-in';
     ctx.beginPath();
