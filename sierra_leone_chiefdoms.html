@@ -660,7 +660,7 @@
 
     <div class="cmd-section">
       <div class="cmd-section-label">Boundaries</div>
-      <div class="cmd-row active" id="chiefdom-btn" title="Toggle paramount chiefdom boundaries">
+      <div class="cmd-row" id="chiefdom-btn" title="Toggle paramount chiefdom boundaries">
         <span class="cmd-icon">🗾</span>
         <span class="cmd-label">Chiefdoms</span>
         <div class="cmd-pill"></div>
@@ -889,7 +889,7 @@ function getChiefdomEthnic(props) {
   return CHIEFDOM_ETHNIC[props.NAME_3] || DISTRICT_ETHNIC[props.NAME_2] || null;
 }
 
-let chiefdomMode  = true;   // chiefdom layer visible by default
+let chiefdomMode  = false;
 let ethnicityMode = false;
 let ethnicityLayer = null;  // independent fill-only layer, created on first toggle
 const ethnicVisible = Object.fromEntries(Object.keys(ETHNICITIES).map(k => [k, true]));
@@ -1080,8 +1080,8 @@ function buildLegend(counts) {
     L.DomEvent.disableClickPropagation(div);
     return div;
   };
-  ctrl.addTo(map);
   provinceLegendCtrl = ctrl;
+  if (chiefdomMode) ctrl.addTo(map);
 }
 
 // ─── Ethnicity legend ────────────────────────────────────────────────────────
@@ -1242,7 +1242,7 @@ async function fetchData() { return EMBEDDED_GEOJSON; }
     // Update stats
     document.getElementById('total-count').textContent = allFeatures.length;
 
-    geoLayer = L.geoJSON(data, { style: f => featureStyle(f), onEachFeature: onEach }).addTo(map);
+    geoLayer = L.geoJSON(data, { style: f => featureStyle(f), onEachFeature: onEach });
     map.fitBounds(geoLayer.getBounds(), { padding: [20, 20] });
 
     buildLegend(counts);
