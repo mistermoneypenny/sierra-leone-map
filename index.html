@@ -892,6 +892,7 @@ function getChiefdomEthnic(props) {
 let chiefdomMode  = true;   // chiefdom layer visible by default
 let ethnicityMode = false;
 let ethnicityLayer = null;  // independent fill-only layer, created on first toggle
+const ethnicVisible = Object.fromEntries(Object.keys(ETHNICITIES).map(k => [k, true]));
 
 // GADM district names have no spaces – format them for display
 function fmtDistrict(raw) {
@@ -1086,6 +1087,22 @@ function buildLegend(counts) {
 // ─── Ethnicity legend ────────────────────────────────────────────────────────
 let ethLegendCtrl = null;
 
+function ethnicStyleFn(f) {
+  const ethnic = getChiefdomEthnic(f.properties);
+  const on = !ethnic || ethnicVisible[ethnic];
+  return {
+    fillColor:   ethnic ? ETHNICITIES[ethnic].color : '#aaaaaa',
+    fillOpacity: on ? 0.72 : 0,
+    stroke:      false,
+    interactive: false,
+  };
+}
+
+function refreshEthnicityLayer() {
+  if (!ethnicityLayer) return;
+  ethnicityLayer.eachLayer(l => l.setStyle(ethnicStyleFn(l.feature)));
+}
+
 function buildEthnicityLegend() {
   if (ethLegendCtrl) { ethLegendCtrl.remove(); ethLegendCtrl = null; }
   const ctrl = L.control({ position: 'bottomleft' });
@@ -1094,10 +1111,16 @@ function buildEthnicityLegend() {
     div.innerHTML = '<h3>Ethnic Group</h3>';
     for (const [key, cfg] of Object.entries(ETHNICITIES)) {
       const row = document.createElement('div');
-      row.className = 'leg-row';
+      row.className = 'leg-row' + (ethnicVisible[key] ? '' : ' dimmed');
+      row.dataset.ethnic = key;
       row.innerHTML =
         `<span class="leg-swatch" style="background:${cfg.color}"></span>` +
         `<span class="leg-name">${cfg.label}</span>`;
+      row.addEventListener('click', () => {
+        ethnicVisible[key] = !ethnicVisible[key];
+        row.classList.toggle('dimmed', !ethnicVisible[key]);
+        refreshEthnicityLayer();
+      });
       div.appendChild(row);
     }
     L.DomEvent.disableClickPropagation(div);
@@ -1130,15 +1153,7 @@ document.getElementById('ethnicity-btn').addEventListener('click', () => {
     // Build the independent ethnic fill layer the first time (reuse on subsequent toggles)
     if (!ethnicityLayer && allFeatures.length) {
       ethnicityLayer = L.geoJSON({ type: 'FeatureCollection', features: allFeatures }, {
-        style: f => {
-          const ethnic = getChiefdomEthnic(f.properties);
-          return {
-            fillColor:   ethnic ? ETHNICITIES[ethnic].color : '#aaaaaa',
-            fillOpacity: 0.72,
-            stroke:      false,
-            interactive: false,
-          };
-        },
+        style: ethnicStyleFn,
         interactive: false,
       });
     }
