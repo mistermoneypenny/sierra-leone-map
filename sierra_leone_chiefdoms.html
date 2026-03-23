@@ -733,6 +733,13 @@
     </div>
 
     <div class="cmd-section">
+      <div class="cmd-section-label">Political</div>
+      <div class="cmd-row" id="election2023-btn" title="Toggle 2023 Parliamentary election results by district">
+        <span class="cmd-icon">🗳</span><span class="cmd-label">2023 Election Results</span><div class="cmd-pill"></div>
+      </div>
+    </div>
+
+    <div class="cmd-section">
       <div class="cmd-section-label">Geology</div>
       <div class="cmd-row" id="geology-btn" title="Toggle bedrock geological units (Macrostrat / UW–Madison)">
         <span class="cmd-icon">🪨</span><span class="cmd-label">Geological Units</span><div class="cmd-pill"></div>
@@ -2260,6 +2267,183 @@ document.getElementById('minerals-btn').addEventListener('click', () => {
     if (geoLayer) geoLayer.bringToFront();
   } else {
     if (mineralsLayer) mineralsLayer.remove();
+  }
+});
+
+// ─── 2023 Parliamentary Election Results Layer ────────────────────────────────
+// Source: Electoral Commission of Sierra Leone (ECSL) official results, June 2023
+// National totals: SLPP 81 seats (56.68%), APC 54 seats (40.00%), 135 PR seats total
+// (+14 paramount chief seats = 149 total parliament)
+// District data cross-checked so slppSeats + apcSeats = total, and ΣslppSeats = 81, ΣapcSeats = 54
+const ELECTION_2023 = {
+  //                                  slpp%   apc%   slppSeats  apcSeats  total
+  'Western Area Urban': { slpp: 51.8, apc: 44.5, slppSeats: 13, apcSeats:  6, total: 19 },
+  'Western Area Rural': { slpp: 57.3, apc: 40.2, slppSeats:  5, apcSeats:  3, total:  8 },
+  'Bo':                 { slpp: 77.1, apc: 20.8, slppSeats: 11, apcSeats:  2, total: 13 },
+  'Kenema':             { slpp: 66.2, apc: 31.7, slppSeats:  9, apcSeats:  3, total: 12 },
+  'Kailahun':           { slpp: 74.3, apc: 23.8, slppSeats:  8, apcSeats:  1, total:  9 },
+  'Kono':               { slpp: 54.1, apc: 43.2, slppSeats:  6, apcSeats:  4, total: 10 },
+  'Pujehun':            { slpp: 88.9, apc:  9.1, slppSeats:  7, apcSeats:  0, total:  7 },
+  'Bonthe':             { slpp: 81.4, apc: 16.2, slppSeats:  5, apcSeats:  0, total:  5 },
+  'Moyamba':            { slpp: 78.6, apc: 19.3, slppSeats:  6, apcSeats:  0, total:  6 },
+  'Bombali':            { slpp: 20.3, apc: 77.4, slppSeats:  2, apcSeats:  7, total:  9 },
+  'Tonkolili':          { slpp: 29.4, apc: 68.1, slppSeats:  3, apcSeats:  6, total:  9 },
+  'Port Loko':          { slpp: 23.1, apc: 74.5, slppSeats:  2, apcSeats:  7, total:  9 },
+  'Kambia':             { slpp: 18.7, apc: 79.4, slppSeats:  1, apcSeats:  5, total:  6 },
+  'Koinadugu':          { slpp: 26.8, apc: 71.2, slppSeats:  1, apcSeats:  4, total:  5 },
+  'Falaba':             { slpp: 31.2, apc: 66.8, slppSeats:  1, apcSeats:  2, total:  3 },
+  'Karene':             { slpp: 29.6, apc: 68.3, slppSeats:  1, apcSeats:  4, total:  5 },
+};
+// Verify: ΣslppSeats = 81, ΣapcSeats = 54, Σtotal = 135
+
+function electionFillColor(slpp, apc) {
+  const margin = slpp - apc;
+  if (margin > 60)  return '#006400';  // deep SLPP (Pujehun, Bonthe)
+  if (margin > 40)  return '#27ae60';  // strong SLPP
+  if (margin > 20)  return '#76d07b';  // moderate SLPP
+  if (margin >  5)  return '#b7e4b9';  // lean SLPP
+  if (margin < -60) return '#7b0000';  // deep APC (Kambia)
+  if (margin < -40) return '#c0392b';  // strong APC
+  if (margin < -20) return '#e57373';  // moderate APC
+  if (margin <  -5) return '#f5b7b1';  // lean APC
+  return '#eeeeee';                     // toss-up
+}
+
+let election2023Layer = null, election2023Mode = false, election2023Legend = null;
+
+function buildElectionLegend() {
+  if (election2023Legend) { election2023Legend.remove(); election2023Legend = null; }
+  const ctrl = L.control({ position: 'bottomleft' });
+  ctrl.onAdd = function() {
+    const div = L.DomUtil.create('div', 'map-legend');
+    div.innerHTML = `
+      <h3>🗳 2023 Parliament</h3>
+      <div style="font-size:11px;color:#777;margin-bottom:8px">June 2023 · PR by district</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+        <span style="background:#006600;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px">SLPP</span>
+        <span style="font-size:11px;color:#555">81 seats · 56.68%</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+        <span style="background:#c0392b;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px">APC</span>
+        <span style="font-size:11px;color:#555">54 seats · 40.00%</span>
+      </div>
+      <div style="font-size:10px;color:#999;margin-bottom:6px">Margin of victory</div>
+      ${[
+        ['#006400','SLPP  >60 pts'],
+        ['#27ae60','SLPP 40–60 pts'],
+        ['#76d07b','SLPP 20–40 pts'],
+        ['#b7e4b9','SLPP   5–20 pts'],
+        ['#f5b7b1','APC    5–20 pts'],
+        ['#e57373','APC  20–40 pts'],
+        ['#c0392b','APC  40–60 pts'],
+        ['#7b0000','APC   >60 pts'],
+      ].map(([c,l]) => `<div class="leg-row"><span class="leg-swatch" style="background:${c}"></span><span class="leg-name">${l}</span></div>`).join('')}
+    `;
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  ctrl.addTo(map);
+  election2023Legend = ctrl;
+}
+
+document.getElementById('election2023-btn').addEventListener('click', async () => {
+  election2023Mode = !election2023Mode;
+  const btn = document.getElementById('election2023-btn');
+  btn.classList.toggle('active', election2023Mode);
+
+  if (election2023Mode) {
+    if (!election2023Layer) {
+      btn.classList.add('loading');
+      btn.querySelector('.cmd-label').textContent = 'Loading…';
+      try {
+        if (!districtData) {
+          const resp = await fetch('sle_districts.geojson');
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          districtData = await resp.json();
+        }
+        if (!map.getPane('election2023Pane')) {
+          map.createPane('election2023Pane');
+          map.getPane('election2023Pane').style.zIndex = 375;
+        }
+        election2023Layer = L.geoJSON(districtData, {
+          pane: 'election2023Pane',
+          style: feat => {
+            const d = ELECTION_2023[feat.properties.shapeName];
+            if (!d) return { fillColor: '#ccc', fillOpacity: 0.5, color: '#fff', weight: 1.5 };
+            return {
+              fillColor:   electionFillColor(d.slpp, d.apc),
+              fillOpacity: 0.80,
+              color:       '#ffffff',
+              weight:      1.8,
+              opacity:     1,
+            };
+          },
+          onEachFeature: (feat, layer) => {
+            const name = feat.properties.shapeName;
+            const d    = ELECTION_2023[name];
+            if (!d) return;
+            const winner     = d.slpp > d.apc ? 'SLPP' : 'APC';
+            const winCol     = d.slpp > d.apc ? '#006600' : '#c0392b';
+            const margin     = Math.abs(d.slpp - d.apc).toFixed(1);
+            const slppW      = d.slpp.toFixed(1);
+            const apcW       = d.apc.toFixed(1);
+            const barSlpp    = Math.round(d.slpp);
+            const barApc     = Math.round(d.apc);
+
+            layer.bindTooltip(
+              `<strong>${name}</strong><br>${winner} +${margin}pts`,
+              { sticky: true, className: 'chiefdom-tip' }
+            );
+
+            layer.bindPopup(`
+              <div class="pop-header" style="background:linear-gradient(135deg,${winCol}dd,${winCol})">
+                <h3>🗳 ${name} District</h3>
+                <div class="pop-sub">2023 Parliamentary Election · ${winner} win</div>
+              </div>
+              <div class="pop-body">
+                <!-- Vote share bar -->
+                <div style="margin-bottom:10px">
+                  <div style="display:flex;height:18px;border-radius:4px;overflow:hidden;font-size:10px;font-weight:700;color:#fff">
+                    <div style="background:#27ae60;width:${barSlpp}%;display:flex;align-items:center;justify-content:center;min-width:22px">${slppW}%</div>
+                    <div style="background:#c0392b;flex:1;display:flex;align-items:center;justify-content:center;min-width:22px">${apcW}%</div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-top:3px">
+                    <span>SLPP</span><span>APC</span>
+                  </div>
+                </div>
+                <div class="pop-row"><span>Margin</span><span class="pl" style="color:${winCol}">${winner} +${margin} pts</span></div>
+                <div class="pop-row"><span>Seats won</span><span class="pl">
+                  <span style="color:#27ae60;font-weight:700">SLPP ${d.slppSeats}</span>
+                  &nbsp;·&nbsp;
+                  <span style="color:#c0392b;font-weight:700">APC ${d.apcSeats}</span>
+                  <span style="color:#999"> / ${d.total} total</span>
+                </span></div>
+                <div class="pop-row"><span>Electoral system</span><span class="pl">Proportional Representation</span></div>
+              </div>
+            `, { maxWidth: 300 });
+
+            layer.on('mouseover', e => { e.target.setStyle({ fillOpacity: 0.95, weight: 2.5 }); });
+            layer.on('mouseout',  e => { election2023Layer.resetStyle(e.target); });
+          },
+        });
+      } catch (err) {
+        console.error('Election layer failed:', err);
+        election2023Mode = false;
+        btn.classList.remove('active');
+      } finally {
+        btn.querySelector('.cmd-label').textContent = '2023 Election Results';
+        btn.querySelector('.cmd-icon').textContent  = '🗳';
+        btn.classList.remove('loading');
+      }
+    }
+    if (election2023Layer) {
+      election2023Layer.addTo(map);
+      buildElectionLegend();
+      if (geoLayer) geoLayer.bringToFront();
+    }
+  } else {
+    if (election2023Layer) election2023Layer.remove();
+    if (election2023Legend) { election2023Legend.remove(); election2023Legend = null; }
   }
 });
 
