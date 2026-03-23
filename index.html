@@ -825,14 +825,14 @@ const DISTRICT_PC = {
 // ─── Ethnic groups ───────────────────────────────────────────────────────────
 // Colors sampled directly from ethnic_map.png legend swatches
 const ETHNICITIES = {
-  'Temne':   { color: '#F0924A', label: 'Temne'   },
-  'Mende':   { color: '#C2B464', label: 'Mende'   },
-  'Limba':   { color: '#EEE36D', label: 'Limba'   },
-  'Koranko': { color: '#6CAA77', label: 'Koranko' },
-  'Kono':    { color: '#6EB8DD', label: 'Kono'    },
-  'Sherbro': { color: '#907560', label: 'Sherbro' },
-  'Susu':    { color: '#21967C', label: 'Susu'    },
-  'Krio':    { color: '#EE98A3', label: 'Krio'    },
+  'Temne':   { color: '#F0924A', label: 'Temne',   wiki: 'https://en.wikipedia.org/wiki/Temne_people'               },
+  'Mende':   { color: '#C2B464', label: 'Mende',   wiki: 'https://en.wikipedia.org/wiki/Mende_people'               },
+  'Limba':   { color: '#EEE36D', label: 'Limba',   wiki: 'https://en.wikipedia.org/wiki/Limba_people'               },
+  'Koranko': { color: '#6CAA77', label: 'Koranko', wiki: 'https://en.wikipedia.org/wiki/Koranko_people'             },
+  'Kono':    { color: '#6EB8DD', label: 'Kono',    wiki: 'https://en.wikipedia.org/wiki/Kono_people_(Sierra_Leone)' },
+  'Sherbro': { color: '#907560', label: 'Sherbro', wiki: 'https://en.wikipedia.org/wiki/Sherbro_people'             },
+  'Susu':    { color: '#21967C', label: 'Susu',    wiki: 'https://en.wikipedia.org/wiki/Susu_people'                },
+  'Krio':    { color: '#EE98A3', label: 'Krio',    wiki: 'https://en.wikipedia.org/wiki/Sierra_Leone_Creole_people' },
 };
 
 // ─── Ethnic group layer — vector-based (colours the existing chiefdom polygons) ──────────
@@ -982,8 +982,10 @@ function onClick(e) {
   const p     = e.target.feature.properties;
   const prov  = getProvince(p);
   const col   = (PROVINCES[prov] || PROVINCES['Northern']).color;
-  const chief = getParamountChief(p);
-  const dist  = districtName(p);
+  const chief  = getParamountChief(p);
+  const dist   = districtName(p);
+  const ethnic = getChiefdomEthnic(p);
+  const ethCfg = ethnic ? ETHNICITIES[ethnic] : null;
 
   // Build the chief block
   let chiefHtml = '';
@@ -1020,6 +1022,7 @@ function onClick(e) {
           <span class="pl">Province</span>
           <span><span class="pop-prov-dot" style="background:${col}"></span>${PROVINCES[prov]?.label || prov}</span>
         </div>
+        ${ethCfg ? `<div class="pop-row"><span class="pl">Ethnic Group</span><span><span class="pop-prov-dot" style="background:${ethCfg.color}"></span><a href="${ethCfg.wiki}" target="_blank" rel="noopener" style="color:#1b5e35;text-decoration:none;font-weight:600">${ethCfg.label} ↗</a></span></div>` : ''}
         <div class="pop-row"><span class="pl">Country</span><span>Sierra Leone 🇸🇱</span></div>
        </div>`
     ).openOn(map);
@@ -2022,31 +2025,31 @@ document.getElementById('geology-btn').addEventListener('click', () => {
         map.createPane('geologyPane');
         map.getPane('geologyPane').style.zIndex = 290;
       }
+      // Proxy catches any layer name the PBF uses (units, geology, carto, etc.)
+      const geoStyle = p => ({
+        fill:        true,
+        fillColor:   p.color || '#cccccc',
+        fillOpacity: 0.65,
+        stroke:      true,
+        color:       p.color || '#aaa',
+        weight:      0.4,
+        opacity:     0.7,
+      });
+      const lineStyle = () => ({ stroke: true, color: '#666', weight: 0.7, opacity: 0.55, fill: false });
+      const styleProxy = new Proxy({}, {
+        get(_, layerName) {
+          return layerName === 'lines' ? lineStyle : geoStyle;
+        }
+      });
+
       geologyLayer = L.vectorGrid.protobuf(
         'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.pbf',
         {
-          pane: 'geologyPane',
-          rendererFactory: L.canvas.tile,
+          rendererFactory: L.svg.tile,
           maxZoom: 16,
           attribution: '© Macrostrat / UW–Madison',
-          vectorTileLayerStyles: {
-            units: p => ({
-              fill:        true,
-              fillColor:   p.color || '#cccccc',
-              fillOpacity: 0.60,
-              stroke:      false,
-              weight:      0,
-            }),
-            lines: () => ({
-              stroke:  true,
-              color:   '#666',
-              weight:  0.6,
-              opacity: 0.5,
-              fill:    false,
-            }),
-          },
+          vectorTileLayerStyles: styleProxy,
           interactive: true,
-          getFeatureId: f => f.properties.map_id,
         }
       ).on('click', function(e) {
         const p = e.layer.properties;
