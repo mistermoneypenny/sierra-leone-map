@@ -675,11 +675,6 @@
         <span class="cmd-label">Parliament</span>
         <div class="cmd-pill"></div>
       </div>
-      <div class="cmd-row" id="councils-btn" title="Toggle 22 local council areas">
-        <span class="cmd-icon">🏙</span>
-        <span class="cmd-label">Local Councils</span>
-        <div class="cmd-pill"></div>
-      </div>
       <div class="cmd-row" id="wards-btn" title="Toggle electoral ward boundaries (NEC)">
         <span class="cmd-icon">📍</span>
         <span class="cmd-label">Wards</span>
@@ -1641,150 +1636,69 @@ document.getElementById('parliament-btn').addEventListener('click', async () => 
   }
 });
 
-// ─── Local Councils Layer ─────────────────────────────────────────────────────
-// Sierra Leone has 22 local councils: 4 city councils, 1 municipal council,
-// and 16 district councils. 5 districts contain both an urban city/municipal
-// council and a rural district council, bringing the total to 22.
-const DISTRICT_COUNCIL = {
-  'Western Area Urban': [{ name: 'Freetown City Council',           type: 'City Council'      }],
-  'Western Area Rural': [{ name: 'W.A. Rural District Council',     type: 'District Council'  }],
-  'Bo':                 [{ name: 'Bo City Council',                 type: 'City Council'      }, { name: 'Bo District Council',       type: 'District Council' }],
-  'Kenema':             [{ name: 'Kenema City Council',             type: 'City Council'      }, { name: 'Kenema District Council',   type: 'District Council' }],
-  'Kono':               [{ name: 'Koidu City Council',              type: 'City Council'      }, { name: 'Kono District Council',     type: 'District Council' }],
-  'Bombali':            [{ name: 'Makeni City Council',             type: 'City Council'      }, { name: 'Bombali District Council',  type: 'District Council' }],
-  'Bonthe':             [{ name: 'Bonthe Municipal Council',        type: 'Municipal Council' }, { name: 'Bonthe District Council',   type: 'District Council' }],
-  'Kambia':             [{ name: 'Kambia District Council',         type: 'District Council'  }],
-  'Kailahun':           [{ name: 'Kailahun District Council',       type: 'District Council'  }],
-  'Koinadugu':          [{ name: 'Koinadugu District Council',      type: 'District Council'  }],
-  'Falaba':             [{ name: 'Falaba District Council',         type: 'District Council'  }],
-  'Karene':             [{ name: 'Karene District Council',         type: 'District Council'  }],
-  'Moyamba':            [{ name: 'Moyamba District Council',        type: 'District Council'  }],
-  'Port Loko':          [{ name: 'Port Loko District Council',      type: 'District Council'  }],
-  'Pujehun':            [{ name: 'Pujehun District Council',        type: 'District Council'  }],
-  'Tonkolili':          [{ name: 'Tonkolili District Council',      type: 'District Council'  }],
-};
-
-let councilsLayer = null, councilsMode = false, councilsDataLoaded = false;
-
-document.getElementById('councils-btn').addEventListener('click', async () => {
-  councilsMode = !councilsMode;
-  const btn = document.getElementById('councils-btn');
-  btn.classList.toggle('active', councilsMode);
-
-  if (councilsMode) {
-    if (!councilsLayer) {
-      btn.classList.add('loading');
-      btn.querySelector('.cmd-label').textContent = 'Loading…';
-      try {
-        if (!districtData) {
-          const resp = await fetch('sle_districts.geojson');
-          if (!resp.ok) throw new Error('HTTP ' + resp.status);
-          districtData = await resp.json();
-        }
-        if (!map.getPane('councilsPane')) {
-          map.createPane('councilsPane');
-          map.getPane('councilsPane').style.zIndex = 415;
-        }
-        councilsLayer = L.geoJSON(districtData, {
-          pane: 'councilsPane',
-          style: () => ({
-            color:       '#1abc9c',
-            weight:      2.5,
-            dashArray:   '8,5',
-            fillColor:   '#1abc9c',
-            fillOpacity: 0.05,
-            opacity:     1,
-          }),
-          onEachFeature: (feat, layer) => {
-            const district = feat.properties.shapeName;
-            const councils = DISTRICT_COUNCIL[district] || [{ name: district + ' District Council', type: 'District Council' }];
-            const prov     = DISTRICT_PROVINCE_MAP[district] || 'Unknown';
-            const provLabel = (PROVINCES[prov] || PROVINCES['Northern']).label;
-
-            layer.bindTooltip(`<strong>${councils[0].name}</strong>`, { sticky: true, className: 'chiefdom-tip' });
-
-            const councilRows = councils.map(c =>
-              `<div class="pop-row"><span>${c.type}</span><span class="pl">${c.name}</span></div>`
-            ).join('');
-
-            layer.bindPopup(`
-              <div class="pop-header" style="background:linear-gradient(135deg,#0e8c6e,#1abc9c)">
-                <h3>🏙 ${district} District</h3>
-                <div class="pop-sub">${provLabel}</div>
-              </div>
-              <div class="pop-body">
-                ${councilRows}
-                <div class="pop-row" style="margin-top:6px;font-size:11px;color:#aaa">
-                  <span>Note</span><span>District boundaries shown; city/municipal councils cover urban sub-areas</span>
-                </div>
-              </div>
-            `, { maxWidth: 300 });
-
-            layer.on('mouseover', e => { e.target.setStyle({ fillOpacity: 0.18, weight: 3 }); });
-            layer.on('mouseout',  e => { councilsLayer.resetStyle(e.target); });
-          },
-        });
-      } catch (err) {
-        console.error('Councils load failed:', err);
-        councilsMode = false;
-        btn.classList.remove('active');
-      } finally {
-        btn.querySelector('.cmd-label').textContent = 'Local Councils';
-        btn.querySelector('.cmd-icon').textContent  = '🏙';
-        btn.classList.remove('loading');
-      }
-    }
-    if (councilsLayer) { councilsLayer.addTo(map); if (geoLayer) geoLayer.bringToFront(); }
-  } else {
-    if (councilsLayer) councilsLayer.remove();
-  }
-});
-
 // ─── Wards Layer ───────────────────────────────────────────────────────────────
 let wardsLayer = null, wardsMode = false, wardsDataLoaded = false;
+
+async function fetchWardsGeoJSON() {
+  // Source 1: GADM 4.1 — ADM4 for Sierra Leone (sections/wards)
+  const sources = [
+    { url: 'https://geodata.ucdavis.edu/gadm/gadm4.1/json/gadm41_SLE_4.json',     nameProp: p => p.NAME_4 || p.NAME_3 || 'Ward', codeProp: p => p.GID_4 || p.GID_3 || ''  },
+    { url: 'https://biogeo.ucdavis.edu/data/gadm3.6/json/gadm36_SLE_4.json',      nameProp: p => p.NAME_4 || p.NAME_3 || 'Ward', codeProp: p => p.GID_4  || ''             },
+    // Source 3: OCHA HDX CKAN — dynamic lookup for ward boundaries package
+    { url: 'https://data.humdata.org/api/3/action/package_show?id=sierra-leone-ward-boundaries', isCkan: true },
+  ];
+
+  for (const src of sources) {
+    try {
+      if (src.isCkan) {
+        // Two-step: CKAN API → resource download URL → GeoJSON
+        const pkg = await fetch(src.url, { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : null);
+        if (!pkg?.result?.resources) continue;
+        const res = pkg.result.resources.find(r => /geojson/i.test(r.format) || /\.geojson$/i.test(r.url));
+        if (!res) continue;
+        const gj = await fetch(res.download_url || res.url, { signal: AbortSignal.timeout(30000) }).then(r => r.ok ? r.json() : null);
+        if (gj?.features?.length) return { data: gj, nameProp: p => p.shapeName || p.name || 'Ward', codeProp: p => p.shapeISO || '' };
+      } else {
+        const gj = await fetch(src.url, { signal: AbortSignal.timeout(30000) }).then(r => r.ok ? r.json() : null);
+        if (gj?.features?.length) return { data: gj, nameProp: src.nameProp, codeProp: src.codeProp };
+      }
+    } catch (_) { /* try next source */ }
+  }
+  return null;
+}
 
 async function loadWardsData() {
   const btn = document.getElementById('wards-btn');
   btn.classList.add('loading');
   btn.querySelector('.cmd-label').textContent = 'Loading…';
   try {
-    // geoBoundaries two-step: API gives the download URL, then fetch the GeoJSON
-    const meta    = await fetch('https://www.geoboundaries.org/api/current/gbOpen/SLE/ADM4/').then(r => {
-      if (!r.ok) throw new Error('geoBoundaries ADM4 not found');
-      return r.json();
-    });
-    const gjURL   = meta.gjDownloadURL;
-    if (!gjURL) throw new Error('No download URL in geoBoundaries response');
-    const wardData = await fetch(gjURL).then(r => {
-      if (!r.ok) throw new Error('Ward GeoJSON fetch failed');
-      return r.json();
-    });
+    const result = await fetchWardsGeoJSON();
+    if (!result) throw new Error('No ward data found across all sources');
 
     if (!map.getPane('wardsPane')) {
       map.createPane('wardsPane');
       map.getPane('wardsPane').style.zIndex = 410;
     }
+    const { data: wardData, nameProp, codeProp } = result;
     wardsLayer = L.geoJSON(wardData, {
       pane: 'wardsPane',
       style: () => ({
-        color:       '#f39c12',
-        weight:      1,
-        dashArray:   '3,4',
-        fillColor:   '#f39c12',
-        fillOpacity: 0.03,
-        opacity:     0.8,
+        color: '#f39c12', weight: 1, dashArray: '3,4',
+        fillColor: '#f39c12', fillOpacity: 0.04, opacity: 0.85,
       }),
       onEachFeature: (feat, layer) => {
-        const name = feat.properties.shapeName || feat.properties.name || 'Ward';
+        const p    = feat.properties;
+        const name = nameProp(p);
+        const code = codeProp(p);
         layer.bindTooltip(name, { sticky: true, className: 'chiefdom-tip' });
         layer.bindPopup(`
           <div class="pop-header" style="background:linear-gradient(135deg,#b7770d,#f39c12)">
             <h3>📍 ${name}</h3>
-            <div class="pop-sub">Electoral Ward · Sierra Leone</div>
+            <div class="pop-sub">Administrative Ward · Sierra Leone</div>
           </div>
           <div class="pop-body">
-            ${feat.properties.shapeISO ? `<div class="pop-row"><span>Code</span><span class="pl">${feat.properties.shapeISO}</span></div>` : ''}
-            <div class="pop-row"><span>Source</span><span class="pl">NEC / geoBoundaries ADM4</span></div>
+            ${p.NAME_3 || p.NAME_2 ? `<div class="pop-row"><span>Chiefdom / District</span><span class="pl">${p.NAME_3 || ''}${p.NAME_3 && p.NAME_2 ? ', ' : ''}${p.NAME_2 || ''}</span></div>` : ''}
+            ${code ? `<div class="pop-row"><span>Code</span><span class="pl">${code}</span></div>` : ''}
           </div>
         `, { maxWidth: 260 });
         layer.on('mouseover', e => { e.target.setStyle({ fillOpacity: 0.18, weight: 2 }); });
@@ -2373,6 +2287,7 @@ document.getElementById('geology-btn').addEventListener('click', () => {
       });
       const lineStyle = () => ({ stroke: true, color: '#666', weight: 0.7, opacity: 0.55, fill: false });
       const styleProxy = new Proxy({}, {
+        has: () => true,          // VectorGrid uses `name in styles` — must return true
         get(_, layerName) {
           return layerName === 'lines' ? lineStyle : geoStyle;
         }
