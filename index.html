@@ -717,9 +717,7 @@
       <div class="cmd-row" id="rivers-btn" title="Toggle major rivers and waterways">
         <span class="cmd-icon">🌊</span><span class="cmd-label">Rivers</span><div class="cmd-pill"></div>
       </div>
-      <div class="cmd-row" id="protected-btn" title="Toggle protected areas and nature reserves">
-        <span class="cmd-icon">🌿</span><span class="cmd-label">Protected Areas</span><div class="cmd-pill"></div>
-      </div>
+
       <div class="cmd-row" id="popdensity-btn" title="Toggle population density by district (2021 census)">
         <span class="cmd-icon">👥</span><span class="cmd-label">Population Density</span><div class="cmd-pill"></div>
       </div>
@@ -2036,78 +2034,6 @@ document.getElementById('roads-btn').addEventListener('click', async () => {
     if (geoLayer) geoLayer.bringToFront();
   } else {
     if (roadsLayer) roadsLayer.remove();
-  }
-});
-
-// ─── Protected Areas Layer ────────────────────────────────────────────────────
-let protectedLayer = null, protectedMode = false, protectedDataLoaded = false;
-
-async function loadProtectedData() {
-  const btn = document.getElementById('protected-btn');
-  btn.classList.add('loading');
-  btn.querySelector('.cmd-label').textContent = 'Loading…';
-  try {
-    if (!map.getPane('protectedPane')) {
-      map.createPane('protectedPane');
-      map.getPane('protectedPane').style.zIndex = 360;
-    }
-    const data = await fetchOverpass(
-      `[out:json][timeout:60][bbox:6.855,-13.49,10.0,-10.27];
-       (way[boundary=protected_area];way[leisure=nature_reserve];way[protect_class];);
-       out geom;`
-    );
-    const gj = overpassWaysToGeoJSON(data.elements);
-    protectedLayer = L.geoJSON(gj, {
-      pane: 'protectedPane',
-      style: () => ({
-        fillColor: '#27ae60', fillOpacity: 0.22,
-        color: '#1e8449', weight: 1.5, dashArray: '6,4', opacity: 0.9,
-      }),
-      onEachFeature: (feat, layer) => {
-        const p = feat.properties;
-        const name = p.name || 'Protected Area';
-        const type = p.boundary || p.leisure || 'Nature Reserve';
-        layer.bindPopup(`
-          <div class="pop-header" style="background:linear-gradient(135deg,#1e8449,#27ae60)">
-            <h3>🌿 ${name}</h3>
-            <div class="pop-sub">${type.replace(/_/g, ' ')}</div>
-          </div>
-          <div class="pop-body">
-            ${p.protect_class ? `<div class="pop-row"><span>Protect class</span><span class="pl">${p.protect_class}</span></div>` : ''}
-            ${p.designation  ? `<div class="pop-row"><span>Designation</span><span class="pl">${p.designation.replace(/_/g,' ')}</span></div>` : ''}
-            ${p.operator     ? `<div class="pop-row"><span>Operator</span><span class="pl">${p.operator}</span></div>` : ''}
-          </div>
-        `, { maxWidth: 280 });
-        layer.bindTooltip(name, { sticky: true, className: 'chiefdom-tip' });
-      },
-    });
-    protectedDataLoaded = true;
-    btn.querySelector('.cmd-label').textContent = 'Protected Areas';
-    btn.querySelector('.cmd-icon').textContent = '🌿';
-    btn.classList.remove('loading');
-    return true;
-  } catch (err) {
-    console.error('Protected areas load failed:', err);
-    btn.querySelector('.cmd-label').textContent = 'Protected Areas';
-    btn.querySelector('.cmd-icon').textContent = '🌿';
-    btn.classList.remove('loading');
-    return false;
-  }
-}
-
-document.getElementById('protected-btn').addEventListener('click', async () => {
-  protectedMode = !protectedMode;
-  const btn = document.getElementById('protected-btn');
-  btn.classList.toggle('active', protectedMode);
-  if (protectedMode) {
-    if (!protectedDataLoaded) {
-      const ok = await loadProtectedData();
-      if (!ok) { protectedMode = false; btn.classList.remove('active'); return; }
-    }
-    protectedLayer.addTo(map);
-    if (geoLayer) geoLayer.bringToFront();
-  } else {
-    if (protectedLayer) protectedLayer.remove();
   }
 });
 
