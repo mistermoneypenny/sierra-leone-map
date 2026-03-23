@@ -702,6 +702,9 @@
           <span class="cmd-sub-label">Small Scale</span>
         </div>
       </div>
+      <div class="cmd-row" id="minerals-btn" title="Toggle known mineral deposit locations (BGS / USGS)">
+        <span class="cmd-icon">💎</span><span class="cmd-label">Mineral Deposits</span><div class="cmd-pill"></div>
+      </div>
     </div>
 
     <div class="cmd-section">
@@ -712,8 +715,8 @@
       <div class="cmd-row" id="protected-btn" title="Toggle protected areas and nature reserves">
         <span class="cmd-icon">🌿</span><span class="cmd-label">Protected Areas</span><div class="cmd-pill"></div>
       </div>
-      <div class="cmd-row" id="forest-btn" title="Toggle forest cover (≥30% canopy density)">
-        <span class="cmd-icon">🌳</span><span class="cmd-label">Forest Cover</span><div class="cmd-pill"></div>
+      <div class="cmd-row" id="popdensity-btn" title="Toggle population density by district (2021 census)">
+        <span class="cmd-icon">👥</span><span class="cmd-label">Population Density</span><div class="cmd-pill"></div>
       </div>
     </div>
 
@@ -1500,6 +1503,7 @@ const DISTRICT_POPULATION = {
   'Western Area Urban': 609174,
 };
 
+let districtData         = null;  // shared GeoJSON between Parliament and Population Density
 let parliamentLayer      = null;
 let parliamentLegendCtrl = null;
 let parliamentDataLoaded = false;
@@ -1532,12 +1536,13 @@ async function loadParliamentData() {
   btn.querySelector('.cmd-icon').textContent = '⏳';
   btn.classList.add('loading');
 
-  // District boundaries hosted in the same repo (geoBoundaries ADM2, SLE)
-  const url = 'sle_districts.geojson';
-
   try {
-    const resp = await fetch(url);
-    const data = await resp.json();
+    if (!districtData) {
+      const resp = await fetch('sle_districts.geojson');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      districtData = await resp.json();
+    }
+    const data = districtData;
 
     if (!map.getPane('parliamentPane')) {
       map.createPane('parliamentPane');
@@ -1758,12 +1763,25 @@ document.getElementById('mining-btn').addEventListener('click', async () => {
 
 // ─── Overpass API helper ──────────────────────────────────────────────────────
 async function fetchOverpass(query) {
-  const resp = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: 'data=' + encodeURIComponent(query),
-  });
-  if (!resp.ok) throw new Error('Overpass error ' + resp.status);
-  return resp.json();
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+  ];
+  for (const url of endpoints) {
+    try {
+      const ctrl  = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 75000);
+      const resp  = await fetch(url, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body:    'data=' + encodeURIComponent(query),
+        signal:  ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (resp.ok) return resp.json();
+    } catch (_) { /* try next endpoint */ }
+  }
+  throw new Error('All Overpass endpoints failed');
 }
 
 function overpassWaysToGeoJSON(elements) {
@@ -1984,32 +2002,162 @@ document.getElementById('protected-btn').addEventListener('click', async () => {
   }
 });
 
-// ─── Forest Cover Layer (GFW tile) ────────────────────────────────────────────
-let forestLayer = null, forestMode = false;
+// ─── Population Density Layer ─────────────────────────────────────────────────
+let popDensityLayer = null, popDensityMode = false, popDensityLegendCtrl = null;
 
-document.getElementById('forest-btn').addEventListener('click', () => {
-  forestMode = !forestMode;
-  document.getElementById('forest-btn').classList.toggle('active', forestMode);
-  if (forestMode) {
-    if (!forestLayer) {
-      if (!map.getPane('forestPane')) {
-        map.createPane('forestPane');
-        map.getPane('forestPane').style.zIndex = 300;
-      }
-      forestLayer = L.tileLayer(
-        'https://tiles.globalforestwatch.org/umd_tree_cover_loss/v1.8/tcd_30/{z}/{x}/{y}.png',
-        {
-          pane:        'forestPane',
-          opacity:     0.7,
-          attribution: '© Global Forest Watch / Hansen/UMD/Google/USGS/NASA',
-          maxZoom:     19,
+function popColor(pop) {
+  return pop > 700000 ? '#005a32' :
+         pop > 550000 ? '#238b45' :
+         pop > 425000 ? '#41ab5d' :
+         pop > 300000 ? '#74c476' :
+                        '#c7e9c0';
+}
+
+function buildPopDensityLegend() {
+  if (popDensityLegendCtrl) { popDensityLegendCtrl.remove(); popDensityLegendCtrl = null; }
+  const ctrl = L.control({ position: 'bottomleft' });
+  ctrl.onAdd = function() {
+    const div = L.DomUtil.create('div', 'map-legend');
+    div.innerHTML = '<h3>Population (2021)</h3>';
+    [
+      { color: '#c7e9c0', label: '< 300,000' },
+      { color: '#74c476', label: '300k – 425k' },
+      { color: '#41ab5d', label: '425k – 550k' },
+      { color: '#238b45', label: '550k – 700k' },
+      { color: '#005a32', label: '> 700,000' },
+    ].forEach(c => {
+      const row = L.DomUtil.create('div', 'leg-row', div);
+      row.style.cursor = 'default';
+      row.innerHTML = `<span class="leg-swatch" style="background:${c.color}"></span><span class="leg-name">${c.label}</span>`;
+    });
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  ctrl.addTo(map);
+  popDensityLegendCtrl = ctrl;
+}
+
+document.getElementById('popdensity-btn').addEventListener('click', async () => {
+  popDensityMode = !popDensityMode;
+  const btn = document.getElementById('popdensity-btn');
+  btn.classList.toggle('active', popDensityMode);
+
+  if (popDensityMode) {
+    if (!popDensityLayer) {
+      btn.classList.add('loading');
+      btn.querySelector('.cmd-label').textContent = 'Loading…';
+      try {
+        if (!districtData) {
+          const resp = await fetch('sle_districts.geojson');
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          districtData = await resp.json();
         }
-      );
+        if (!map.getPane('popDensityPane')) {
+          map.createPane('popDensityPane');
+          map.getPane('popDensityPane').style.zIndex = 370;
+        }
+        popDensityLayer = L.geoJSON(districtData, {
+          pane:  'popDensityPane',
+          style: feat => {
+            const pop = DISTRICT_POPULATION[feat.properties.shapeName];
+            return { fillColor: popColor(pop), fillOpacity: 0.72, color: '#fff', weight: 1.5, opacity: 0.8 };
+          },
+          onEachFeature: (feat, layer) => {
+            const name   = feat.properties.shapeName;
+            const pop    = DISTRICT_POPULATION[name];
+            const popFmt = pop ? pop.toLocaleString() : '—';
+            const prov   = DISTRICT_PROVINCE_MAP[name] || 'Unknown';
+            const col    = popColor(pop);
+            layer.bindTooltip(`<strong>${name}</strong><br>${popFmt}`, { sticky: true, className: 'chiefdom-tip' });
+            layer.bindPopup(`
+              <div class="pop-header" style="background:linear-gradient(135deg,${col},${col}bb)">
+                <h3>👥 ${name} District</h3>
+                <div class="pop-sub">${(PROVINCES[prov] || PROVINCES['Northern']).label}</div>
+              </div>
+              <div class="pop-body">
+                <div class="pop-row"><span>Population</span><span class="pl">${popFmt}</span></div>
+                <div class="pop-row"><span>Source</span><span class="pl">2021 Census · Statistics Sierra Leone</span></div>
+              </div>
+            `, { maxWidth: 260 });
+          },
+        });
+      } catch (err) {
+        console.error('Population density load failed:', err);
+        popDensityMode = false;
+        btn.classList.remove('active');
+      } finally {
+        btn.querySelector('.cmd-label').textContent = 'Population Density';
+        btn.querySelector('.cmd-icon').textContent  = '👥';
+        btn.classList.remove('loading');
+      }
     }
-    forestLayer.addTo(map);
+    if (popDensityLayer) {
+      popDensityLayer.addTo(map);
+      buildPopDensityLegend();
+      if (geoLayer) geoLayer.bringToFront();
+    }
+  } else {
+    if (popDensityLayer) popDensityLayer.remove();
+    if (popDensityLegendCtrl) { popDensityLegendCtrl.remove(); popDensityLegendCtrl = null; }
+  }
+});
+
+// ─── Mineral Deposits Layer ────────────────────────────────────────────────────
+const MINERAL_DEPOSITS = [
+  { name: 'Tonkolili Iron Ore',    commodity: 'Iron Ore',                 type: 'iron',    company: 'SL Mining Ltd',                    district: 'Tonkolili',       status: 'Active',      lat: 8.63,  lng: -11.78, notes: '~13 billion tonne magnetite resource in Sula Mountains; one of Africa\'s largest iron ore deposits' },
+  { name: 'Marampa Iron Ore',      commodity: 'Iron Ore',                 type: 'iron',    company: 'Marampa Mines (Gerald Group)',      district: 'Port Loko',       status: 'Development', lat: 8.68,  lng: -12.53, notes: 'High-grade hematite / magnetite near Lunsar; historic producer reopened' },
+  { name: 'Koidu Diamond Mine',    commodity: 'Diamond',                  type: 'diamond', company: 'Koidu Ltd (BSG Resources)',         district: 'Kono',            status: 'Active',      lat: 8.64,  lng: -10.97, notes: 'Kimberlite diamond mine; significant gem-quality production' },
+  { name: 'Tongo Diamond Field',   commodity: 'Diamond',                  type: 'diamond', company: 'Octéa Mining',                      district: 'Kenema',          status: 'Active',      lat: 7.92,  lng: -11.45, notes: 'Large kimberlite / alluvial diamond field' },
+  { name: 'Sierra Rutile',         commodity: 'Rutile, Ilmenite, Zircon', type: 'rutile',  company: 'Sierra Rutile Ltd (Iluka Resources)', district: 'Bonthe / Moyamba', status: 'Active',   lat: 7.75,  lng: -12.57, notes: 'World\'s largest natural rutile deposit; operating since 1979' },
+  { name: 'Nimini Hills Gold',     commodity: 'Gold',                     type: 'gold',    company: 'Exploration stage',                 district: 'Kono / Kenema',   status: 'Exploration', lat: 8.49,  lng: -11.12, notes: 'Greenstone-belt hosted gold; multiple exploration licences active' },
+  { name: 'Baomahun Gold',         commodity: 'Gold',                     type: 'gold',    company: 'Hummingbird Resources',             district: 'Bo',              status: 'Development', lat: 7.93,  lng: -11.93, notes: 'Positive feasibility study; advancing toward construction' },
+  { name: 'Mokanji Bauxite',       commodity: 'Bauxite',                  type: 'bauxite', company: 'SIEROMCO (historic)',               district: 'Moyamba',         status: 'Inactive',    lat: 7.92,  lng: -12.10, notes: 'Former bauxite exporter; significant known reserves remain' },
+  { name: 'Kangari Hills',         commodity: 'Diamond / Gold',           type: 'diamond', company: 'Various artisanal',                 district: 'Tonkolili / Bo',  status: 'Artisanal',   lat: 8.33,  lng: -11.68, notes: 'Alluvial diamond and gold-bearing area across chiefdom boundaries' },
+];
+
+const MINERAL_COLORS = {
+  iron: '#c0392b', diamond: '#00acc1', gold: '#f39c12', rutile: '#8e44ad', bauxite: '#e67e22',
+};
+
+let mineralsLayer = null, mineralsMode = false;
+
+document.getElementById('minerals-btn').addEventListener('click', () => {
+  mineralsMode = !mineralsMode;
+  document.getElementById('minerals-btn').classList.toggle('active', mineralsMode);
+
+  if (mineralsMode) {
+    if (!mineralsLayer) {
+      if (!map.getPane('mineralsPane')) {
+        map.createPane('mineralsPane');
+        map.getPane('mineralsPane').style.zIndex = 430;
+      }
+      const markers = MINERAL_DEPOSITS.map(d => {
+        const col = MINERAL_COLORS[d.type] || '#888';
+        const m   = L.circleMarker([d.lat, d.lng], {
+          pane: 'mineralsPane', radius: 9,
+          fillColor: col, color: '#fff', weight: 2, fillOpacity: 0.9,
+        });
+        m.bindTooltip(d.name, { sticky: true, className: 'chiefdom-tip' });
+        m.bindPopup(`
+          <div class="pop-header" style="background:linear-gradient(135deg,${col}dd,${col})">
+            <h3>⛏ ${d.name}</h3>
+            <div class="pop-sub">${d.commodity}</div>
+          </div>
+          <div class="pop-body">
+            <div class="pop-row"><span>Company</span><span class="pl">${d.company}</span></div>
+            <div class="pop-row"><span>District</span><span class="pl">${d.district}</span></div>
+            <div class="pop-row"><span>Status</span><span class="pl">${d.status}</span></div>
+            <div class="pop-row" style="flex-direction:column;gap:3px"><span>Notes</span><span class="pl" style="font-size:11px;line-height:1.4">${d.notes}</span></div>
+          </div>
+        `, { maxWidth: 290 });
+        return m;
+      });
+      mineralsLayer = L.featureGroup(markers);
+    }
+    mineralsLayer.addTo(map);
     if (geoLayer) geoLayer.bringToFront();
   } else {
-    if (forestLayer) forestLayer.remove();
+    if (mineralsLayer) mineralsLayer.remove();
   }
 });
 
