@@ -2377,7 +2377,56 @@ document.getElementById('election2023-btn').addEventListener('click', async () =
 // direct HTTP check. Pane z-index 210 sits above the basemap tile pane (200)
 // but below all vector overlay panes (400+), so geology colours show through
 // without obscuring chiefdoms, parliament, etc.
-let geologyLayer = null, geologyMode = false;
+let geologyLayer = null, geologyMode = false, geologyLegendCtrl = null;
+
+// International Commission on Stratigraphy standard colours, youngest → oldest.
+// Sierra Leone geology is dominated by Paleoproterozoic/Archean craton rocks,
+// Neoproterozoic Rokelide belt metamorphics, and Quaternary coastal sediments.
+const GEOLOGY_PERIODS = [
+  { color: '#F9F97F', label: 'Quaternary',       age: '< 2.6 Ma'      },
+  { color: '#FFE619', label: 'Neogene',           age: '2.6 – 23 Ma'   },
+  { color: '#FD9A52', label: 'Paleogene',         age: '23 – 66 Ma'    },
+  { color: '#7FC64E', label: 'Cretaceous',        age: '66 – 145 Ma'   },
+  { color: '#34B2C9', label: 'Jurassic',          age: '145 – 201 Ma'  },
+  { color: '#812B92', label: 'Triassic',          age: '201 – 252 Ma'  },
+  { color: '#F04028', label: 'Permian',           age: '252 – 299 Ma'  },
+  { color: '#67A599', label: 'Carboniferous',     age: '299 – 359 Ma'  },
+  { color: '#CB8C37', label: 'Devonian',          age: '359 – 419 Ma'  },
+  { color: '#B3E1B6', label: 'Silurian',          age: '419 – 444 Ma'  },
+  { color: '#009270', label: 'Ordovician',        age: '444 – 485 Ma'  },
+  { color: '#7FA056', label: 'Cambrian',          age: '485 – 539 Ma'  },
+  { color: '#FE4FA2', label: 'Neoproterozoic',    age: '539 Ma – 1 Ga' },
+  { color: '#E05098', label: 'Mesoproterozoic',   age: '1.0 – 1.6 Ga'  },
+  { color: '#F04370', label: 'Paleoproterozoic',  age: '1.6 – 2.5 Ga'  },
+  { color: '#F06A25', label: 'Archean',           age: '> 2.5 Ga'      },
+];
+
+function buildGeologyLegend() {
+  if (geologyLegendCtrl) { geologyLegendCtrl.remove(); geologyLegendCtrl = null; }
+  const ctrl = L.control({ position: 'bottomleft' });
+  ctrl.onAdd = function() {
+    const div = L.DomUtil.create('div', 'map-legend');
+    div.style.maxHeight = '340px';
+    div.style.overflowY = 'auto';
+    div.innerHTML = `
+      <h3>🪨 Geological Units</h3>
+      <div style="font-size:10px;color:#888;margin-bottom:8px">ICS Geological Timescale · Macrostrat</div>
+      ${GEOLOGY_PERIODS.map(p => `
+        <div class="leg-row">
+          <span class="leg-swatch" style="background:${p.color};border:1px solid rgba(0,0,0,0.15)"></span>
+          <span class="leg-name" style="flex:1">${p.label}</span>
+          <span style="font-size:10px;color:#aaa;margin-left:6px;white-space:nowrap">${p.age}</span>
+        </div>`).join('')}
+      <div style="font-size:10px;color:#bbb;margin-top:8px;border-top:1px solid #eee;padding-top:6px">
+        Ma = million years ago · Ga = billion years ago
+      </div>
+    `;
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  ctrl.addTo(map);
+  geologyLegendCtrl = ctrl;
+}
 
 document.getElementById('geology-btn').addEventListener('click', () => {
   geologyMode = !geologyMode;
@@ -2391,18 +2440,20 @@ document.getElementById('geology-btn').addEventListener('click', () => {
       geologyLayer = L.tileLayer(
         'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
         {
-          pane:        'geologyPane',
-          opacity:     0.75,
-          attribution: '© Macrostrat · UW–Madison',
+          pane:          'geologyPane',
+          opacity:       0.75,
+          attribution:   '© Macrostrat · UW–Madison',
           maxNativeZoom: 12,
           maxZoom:       19,
         }
       );
     }
     geologyLayer.addTo(map);
+    buildGeologyLegend();
     if (geoLayer) geoLayer.bringToFront();
   } else {
     if (geologyLayer) geologyLayer.remove();
+    if (geologyLegendCtrl) { geologyLegendCtrl.remove(); geologyLegendCtrl = null; }
   }
 });
 
