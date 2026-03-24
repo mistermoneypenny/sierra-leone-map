@@ -2373,10 +2373,10 @@ document.getElementById('election2023-btn').addEventListener('click', async () =
 });
 
 // ─── Geological Units Layer ────────────────────────────────────────────────────
-// Uses ESRI's public World Geology Map tile cache — standard image tiles,
-// no CORS required. Previous VectorGrid/PBF approach silently failed because
-// Macrostrat's tile server does not send Access-Control-Allow-Origin headers,
-// which browsers require for XHR-based vector tile fetches.
+// Macrostrat (UW–Madison) serves valid 256×256 PNG geology tiles confirmed via
+// direct HTTP check. Pane z-index 210 sits above the basemap tile pane (200)
+// but below all vector overlay panes (400+), so geology colours show through
+// without obscuring chiefdoms, parliament, etc.
 let geologyLayer = null, geologyMode = false;
 
 document.getElementById('geology-btn').addEventListener('click', () => {
@@ -2386,17 +2386,16 @@ document.getElementById('geology-btn').addEventListener('click', () => {
     if (!geologyLayer) {
       if (!map.getPane('geologyPane')) {
         map.createPane('geologyPane');
-        map.getPane('geologyPane').style.zIndex = 290;
+        map.getPane('geologyPane').style.zIndex = 210;
       }
-      // ESRI tile caches use tile/{z}/{row}/{col} → Leaflet {z}/{y}/{x}
       geologyLayer = L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/Specialty/World_Geology_Map/MapServer/tile/{z}/{y}/{x}',
+        'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
         {
           pane:        'geologyPane',
-          opacity:     0.70,
-          attribution: '© Esri, CGMW, USGS, ATC, NRCAN',
-          maxZoom:     12,
-          minZoom:     2,
+          opacity:     0.75,
+          attribution: '© Macrostrat · UW–Madison',
+          maxNativeZoom: 12,
+          maxZoom:       19,
         }
       );
     }
