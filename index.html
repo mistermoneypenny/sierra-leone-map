@@ -327,7 +327,7 @@
       gap: 7px;
     }
     .cmd-section {
-      padding: 8px 0 4px;
+      padding: 5px 0 2px;
       border-bottom: 1px solid #eef0ee;
     }
     .cmd-section:last-child { border-bottom: none; }
@@ -337,13 +337,13 @@
       text-transform: uppercase;
       letter-spacing: 0.7px;
       color: #bbb;
-      padding: 0 14px 5px;
+      padding: 0 12px 3px;
     }
     .cmd-row {
       display: flex;
       align-items: center;
       gap: 9px;
-      padding: 7px 14px;
+      padding: 5px 12px;
       cursor: pointer;
       transition: background 0.14s;
       user-select: none;
@@ -743,6 +743,9 @@
       <div class="cmd-section-label">Geology</div>
       <div class="cmd-row" id="geology-btn" title="Toggle bedrock geological units (Macrostrat / UW–Madison)">
         <span class="cmd-icon">🪨</span><span class="cmd-label">Geological Units</span><div class="cmd-pill"></div>
+      </div>
+      <div class="cmd-row" id="mineralisation-btn" title="Toggle mineralisation map (Jalloh et al. 2017)">
+        <span class="cmd-icon">⚗️</span><span class="cmd-label">Mineralisation</span><div class="cmd-pill"></div>
       </div>
     </div>
 
@@ -2449,6 +2452,30 @@ document.getElementById('geology-btn').addEventListener('click', async () => {
     if (geologyLayer)       geologyLayer.remove();
     if (geologyBorderLayer) geologyBorderLayer.remove();
     if (geologyLegendCtrl)  { geologyLegendCtrl.remove(); geologyLegendCtrl = null; }
+  }
+});
+
+// ─── Mineralisation Layer ──────────────────────────────────────────────────────
+// Image overlay: Jalloh et al. (2017) geological map of Sierra Leone (ResearchGate fig 2)
+let mineralisationLayer = null, mineralisationMode = false;
+
+document.getElementById('mineralisation-btn').addEventListener('click', () => {
+  mineralisationMode = !mineralisationMode;
+  document.getElementById('mineralisation-btn').classList.toggle('active', mineralisationMode);
+  if (mineralisationMode) {
+    if (!mineralisationLayer) {
+      // Geographic bounds calibrated to Sierra Leone (SW → NE)
+      const bounds = [[6.75, -13.35], [10.05, -10.25]];
+      mineralisationLayer = L.imageOverlay(
+        'https://www.researchgate.net/profile/Yaguba-Jalloh/publication/321879767/figure/fig2/AS:572926392451072@1513607704167/Geological-map-of-Sierra-Leone-showing-the-Bullom-Group.png',
+        bounds,
+        { opacity: 0.75, interactive: false, crossOrigin: true }
+      );
+    }
+    mineralisationLayer.addTo(map);
+    if (geoLayer) geoLayer.bringToFront();
+  } else {
+    if (mineralisationLayer) mineralisationLayer.remove();
   }
 });
 
