@@ -2435,7 +2435,7 @@ document.getElementById('geology-btn').addEventListener('click', async () => {
         }
         const geom = sleBoundaryGJ.features[0].geometry;
         const boundary = geoJsonGeomToLatLngs(geom);
-        geologyLayer = L.TileLayer.boundaryCanvas(
+        geologyLayer = L.tileLayer.boundaryCanvas(
           'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
           { boundary, opacity: 0.85, attribution: '© Macrostrat · UW–Madison', maxNativeZoom: 12, maxZoom: 19 }
         );
