@@ -2360,7 +2360,7 @@ document.getElementById('election2023-btn').addEventListener('click', async () =
 // direct HTTP check. Pane z-index 210 sits above the basemap tile pane (200)
 // but below all vector overlay panes (400+), so geology colours show through
 // without obscuring chiefdoms, parliament, etc.
-let geologyLayer = null, geologyMode = false, geologyLegendCtrl = null;
+let geologyLayer = null, geologyMode = false, geologyLegendCtrl = null, geologyBorderLayer = null, sleBorderGJ = null;
 
 const GEOLOGY_PERIODS = [
   { color: '#F9F97F', label: 'Quaternary',       age: '< 2.6 Ma'      },
@@ -2408,7 +2408,7 @@ function buildGeologyLegend() {
   geologyLegendCtrl = ctrl;
 }
 
-document.getElementById('geology-btn').addEventListener('click', () => {
+document.getElementById('geology-btn').addEventListener('click', async () => {
   geologyMode = !geologyMode;
   const btn = document.getElementById('geology-btn');
   btn.classList.toggle('active', geologyMode);
@@ -2426,11 +2426,34 @@ document.getElementById('geology-btn').addEventListener('click', () => {
       );
     }
     geologyLayer.addTo(map);
+
+    // Draw SL border outline on top of geology tiles so the boundary is clearly visible
+    if (!geologyBorderLayer) {
+      try {
+        if (!sleBorderGJ) {
+          const r = await fetch('sle_border.geojson');
+          sleBorderGJ = await r.json();
+        }
+        if (!map.getPane('geologyBorderPane')) {
+          map.createPane('geologyBorderPane');
+          map.getPane('geologyBorderPane').style.zIndex = 210;
+          map.getPane('geologyBorderPane').style.pointerEvents = 'none';
+        }
+        geologyBorderLayer = L.geoJSON(sleBorderGJ, {
+          pane: 'geologyBorderPane',
+          style: { color: '#000', weight: 2.5, opacity: 0.85, fill: false },
+          interactive: false,
+        });
+      } catch (e) { console.warn('SL border overlay failed:', e); }
+    }
+    if (geologyBorderLayer) geologyBorderLayer.addTo(map);
+
     buildGeologyLegend();
     if (geoLayer) geoLayer.bringToFront();
   } else {
-    if (geologyLayer)      geologyLayer.remove();
-    if (geologyLegendCtrl) { geologyLegendCtrl.remove(); geologyLegendCtrl = null; }
+    if (geologyLayer)       geologyLayer.remove();
+    if (geologyBorderLayer) geologyBorderLayer.remove();
+    if (geologyLegendCtrl)  { geologyLegendCtrl.remove(); geologyLegendCtrl = null; }
   }
 });
 
