@@ -2467,9 +2467,9 @@ document.getElementById('mineralisation-btn').addEventListener('click', () => {
       // Geographic bounds calibrated to Sierra Leone (SW → NE)
       const bounds = [[6.75, -13.35], [10.05, -10.25]];
       mineralisationLayer = L.imageOverlay(
-        'https://www.researchgate.net/profile/Yaguba-Jalloh/publication/321879767/figure/fig2/AS:572926392451072@1513607704167/Geological-map-of-Sierra-Leone-showing-the-Bullom-Group.png',
+        'mineralisation_map.png',
         bounds,
-        { opacity: 0.75, interactive: false, crossOrigin: true }
+        { opacity: 0.85, interactive: false }
       );
     }
     mineralisationLayer.addTo(map);
