@@ -2406,20 +2406,6 @@ function buildGeologyLegend() {
   geologyLegendCtrl = ctrl;
 }
 
-// Convert GeoJSON geometry coordinates to plain [lat, lng] arrays for BoundaryCanvas.
-// IMPORTANT: BoundaryCanvas uses L.Util.isArray() to detect coordinate type.
-// L.latLng() objects return false — only plain arrays pass the check correctly.
-function geoJsonGeomToLatLngs(geometry) {
-  const toLL = c => [c[1], c[0]]; // GeoJSON [lng, lat] → Leaflet [lat, lng]
-  if (geometry.type === 'Polygon') {
-    return geometry.coordinates.map(ring => ring.map(toLL));
-  }
-  if (geometry.type === 'MultiPolygon') {
-    return geometry.coordinates.map(poly => poly.map(ring => ring.map(toLL)));
-  }
-  return null;
-}
-
 document.getElementById('geology-btn').addEventListener('click', async () => {
   geologyMode = !geologyMode;
   const btn = document.getElementById('geology-btn');
@@ -2433,11 +2419,11 @@ document.getElementById('geology-btn').addEventListener('click', async () => {
           if (!r.ok) throw new Error('sle_border.geojson fetch failed: ' + r.status);
           sleBoundaryGJ = await r.json();
         }
-        const geom = sleBoundaryGJ.features[0].geometry;
-        const boundary = geoJsonGeomToLatLngs(geom);
-        geologyLayer = L.tileLayer.boundaryCanvas(
+        // Pass the GeoJSON Feature directly — BoundaryCanvas handles Feature/MultiPolygon natively.
+        // Factory is L.TileLayer.boundaryCanvas (uppercase T), not L.tileLayer.boundaryCanvas.
+        geologyLayer = L.TileLayer.boundaryCanvas(
           'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
-          { boundary, opacity: 0.85, attribution: '© Macrostrat · UW–Madison', maxNativeZoom: 12, maxZoom: 19 }
+          { boundary: sleBoundaryGJ.features[0], opacity: 0.85, attribution: '© Macrostrat · UW–Madison', maxNativeZoom: 12, maxZoom: 19 }
         );
       } catch (err) {
         console.error('Geology layer failed:', err);
