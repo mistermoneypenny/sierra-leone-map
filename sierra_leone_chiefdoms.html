@@ -719,7 +719,7 @@
       </div>
 
       <div class="cmd-row" id="popdensity-btn" title="Toggle population density by district (2021 census)">
-        <span class="cmd-icon">👥</span><span class="cmd-label">Population Density</span><div class="cmd-pill"></div>
+        <span class="cmd-icon">👥</span><span class="cmd-label">Population</span><div class="cmd-pill"></div>
       </div>
     </div>
 
@@ -2439,7 +2439,7 @@ document.getElementById('geology-btn').addEventListener('click', async () => {
         if (!boundary) throw new Error('Unrecognised geometry type: ' + geom.type);
         geologyLayer = L.TileLayer.boundaryCanvas(
           'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
-          { boundary, opacity: 0.80, attribution: '© Macrostrat · UW–Madison', maxNativeZoom: 12, maxZoom: 19 }
+          { boundary, opacity: 0.80, attribution: '© Macrostrat · UW–Madison', maxNativeZoom: 12, maxZoom: 19, className: 'geology-tiles' }
         );
       } catch (err) {
         console.error('Geology layer failed:', err);
@@ -2461,6 +2461,11 @@ document.getElementById('geology-btn').addEventListener('click', async () => {
 (function() {
   const s = document.createElement('style');
   s.textContent = `
+    /* Geology tile seam fix: 1px overlap eliminates grid lines between canvas tiles */
+    .geology-tiles .leaflet-tile {
+      width:  257px !important;
+      height: 257px !important;
+    }
     .concession-label {
       background: rgba(0,0,0,0.72) !important;
       border: none !important;
