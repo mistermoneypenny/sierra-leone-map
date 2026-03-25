@@ -6,6 +6,7 @@
   <title>Sierra Leone – Paramount Chiefdoms</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-boundary-canvas@1.0.0/src/BoundaryCanvas.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2357,7 +2358,7 @@ document.getElementById('election2023-btn').addEventListener('click', async () =
 // direct HTTP check. Pane z-index 210 sits above the basemap tile pane (200)
 // but below all vector overlay panes (400+), so geology colours show through
 // without obscuring chiefdoms, parliament, etc.
-let geologyLayer = null, geologyMode = false, geologyLegendCtrl = null, geologyMaskLayer = null, sleBoundaryGJ = null;
+let geologyLayer = null, geologyMode = false, geologyLegendCtrl = null, sleBoundaryGJ = null;
 
 const GEOLOGY_PERIODS = [
   { color: '#F9F97F', label: 'Quaternary',       age: '< 2.6 Ma'      },
@@ -2405,66 +2406,51 @@ function buildGeologyLegend() {
   geologyLegendCtrl = ctrl;
 }
 
+// Convert GeoJSON geometry coordinates to plain [lat, lng] arrays for BoundaryCanvas.
+// IMPORTANT: BoundaryCanvas uses L.Util.isArray() to detect coordinate type.
+// L.latLng() objects return false — only plain arrays pass the check correctly.
+function geoJsonGeomToLatLngs(geometry) {
+  const toLL = c => [c[1], c[0]]; // GeoJSON [lng, lat] → Leaflet [lat, lng]
+  if (geometry.type === 'Polygon') {
+    return geometry.coordinates.map(ring => ring.map(toLL));
+  }
+  if (geometry.type === 'MultiPolygon') {
+    return geometry.coordinates.map(poly => poly.map(ring => ring.map(toLL)));
+  }
+  return null;
+}
+
 document.getElementById('geology-btn').addEventListener('click', async () => {
   geologyMode = !geologyMode;
   const btn = document.getElementById('geology-btn');
   btn.classList.toggle('active', geologyMode);
 
   if (geologyMode) {
-    // ── Tile layer (plain L.tileLayer — we know this renders) ──────────────
     if (!geologyLayer) {
-      if (!map.getPane('geologyPane')) {
-        map.createPane('geologyPane');
-        map.getPane('geologyPane').style.zIndex = 205;
+      try {
+        if (!sleBoundaryGJ) {
+          const r = await fetch('sle_border.geojson');
+          if (!r.ok) throw new Error('sle_border.geojson fetch failed: ' + r.status);
+          sleBoundaryGJ = await r.json();
+        }
+        const geom = sleBoundaryGJ.features[0].geometry;
+        const boundary = geoJsonGeomToLatLngs(geom);
+        geologyLayer = L.TileLayer.boundaryCanvas(
+          'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
+          { boundary, opacity: 0.85, attribution: '© Macrostrat · UW–Madison', maxNativeZoom: 12, maxZoom: 19 }
+        );
+      } catch (err) {
+        console.error('Geology layer failed:', err);
+        geologyMode = false;
+        btn.classList.remove('active');
+        return;
       }
-      geologyLayer = L.tileLayer(
-        'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
-        { pane: 'geologyPane', opacity: 0.85, attribution: '© Macrostrat · UW–Madison', maxNativeZoom: 12, maxZoom: 19 }
-      );
     }
     geologyLayer.addTo(map);
-
-    // ── Inverted polygon mask clips tiles to SL border ─────────────────────
-    // Loads sle_border.geojson from the repo (no external dependency).
-    // Mask pane sits at z-index 206 — just above geology tiles (205) but
-    // below all vector overlay panes (400+), so chiefdoms/parliament etc.
-    // are unaffected. FillColor matches CartoDB Positron background.
-    if (!sleBoundaryGJ) {
-      try {
-        const r = await fetch('sle_border.geojson');
-        sleBoundaryGJ = await r.json();
-      } catch (e) {
-        console.warn('Geology mask not loaded:', e);
-      }
-    }
-    if (sleBoundaryGJ && !geologyMaskLayer) {
-      const geom = sleBoundaryGJ.features[0].geometry;
-      // World bounding box with SL rings as holes (evenodd fill rule).
-      const outerRing = [[-179,-89],[179,-89],[179,89],[-179,89],[-179,-89]];
-      const holes = geom.type === 'Polygon'
-        ? [geom.coordinates[0]]
-        : geom.coordinates.map(p => p[0]);
-      const maskGJ = { type:'Feature', geometry:{ type:'Polygon', coordinates:[outerRing,...holes] }, properties:{} };
-
-      if (!map.getPane('geologyMaskPane')) {
-        map.createPane('geologyMaskPane');
-        map.getPane('geologyMaskPane').style.zIndex        = 206;
-        map.getPane('geologyMaskPane').style.pointerEvents = 'none';
-      }
-      geologyMaskLayer = L.geoJSON(maskGJ, {
-        pane:        'geologyMaskPane',
-        style:       { fillColor:'#f0ece4', fillOpacity:0.96, color:'transparent', weight:0 },
-        interactive: false,
-        renderer:    L.svg({ padding: 1 }),
-      });
-    }
-    if (geologyMaskLayer) geologyMaskLayer.addTo(map);
-
     buildGeologyLegend();
     if (geoLayer) geoLayer.bringToFront();
   } else {
     if (geologyLayer)      geologyLayer.remove();
-    if (geologyMaskLayer)  geologyMaskLayer.remove();
     if (geologyLegendCtrl) { geologyLegendCtrl.remove(); geologyLegendCtrl = null; }
   }
 });
