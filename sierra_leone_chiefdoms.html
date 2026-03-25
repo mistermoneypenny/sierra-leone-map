@@ -1645,31 +1645,13 @@ document.getElementById('parliament-btn').addEventListener('click', async () => 
 let wardsLayer = null, wardsMode = false, wardsDataLoaded = false;
 
 async function fetchWardsGeoJSON() {
-  // Source 1: GADM 4.1 — ADM4 for Sierra Leone (sections/wards)
-  const sources = [
-    { url: 'https://geodata.ucdavis.edu/gadm/gadm4.1/json/gadm41_SLE_4.json',     nameProp: p => p.NAME_4 || p.NAME_3 || 'Ward', codeProp: p => p.GID_4 || p.GID_3 || ''  },
-    { url: 'https://biogeo.ucdavis.edu/data/gadm3.6/json/gadm36_SLE_4.json',      nameProp: p => p.NAME_4 || p.NAME_3 || 'Ward', codeProp: p => p.GID_4  || ''             },
-    // Source 3: OCHA HDX CKAN — dynamic lookup for ward boundaries package
-    { url: 'https://data.humdata.org/api/3/action/package_show?id=sierra-leone-ward-boundaries', isCkan: true },
-  ];
-
-  for (const src of sources) {
-    try {
-      if (src.isCkan) {
-        // Two-step: CKAN API → resource download URL → GeoJSON
-        const pkg = await fetch(src.url, { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : null);
-        if (!pkg?.result?.resources) continue;
-        const res = pkg.result.resources.find(r => /geojson/i.test(r.format) || /\.geojson$/i.test(r.url));
-        if (!res) continue;
-        const gj = await fetch(res.download_url || res.url, { signal: AbortSignal.timeout(30000) }).then(r => r.ok ? r.json() : null);
-        if (gj?.features?.length) return { data: gj, nameProp: p => p.shapeName || p.name || 'Ward', codeProp: p => p.shapeISO || '' };
-      } else {
-        const gj = await fetch(src.url, { signal: AbortSignal.timeout(30000) }).then(r => r.ok ? r.json() : null);
-        if (gj?.features?.length) return { data: gj, nameProp: src.nameProp, codeProp: src.codeProp };
-      }
-    } catch (_) { /* try next source */ }
-  }
-  return null;
+  // geoBoundaries ADM4 for Sierra Leone — confirmed present, single hop, CORS-safe.
+  const url = 'https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/SLE/ADM4/geoBoundaries-SLE-ADM4.geojson';
+  const r = await fetch(url, { signal: AbortSignal.timeout(30000) });
+  if (!r.ok) throw new Error('Wards fetch failed: ' + r.status);
+  const gj = await r.json();
+  if (!gj?.features?.length) throw new Error('Empty ward GeoJSON');
+  return { data: gj, nameProp: p => p.shapeName || p.name || 'Ward', codeProp: p => p.shapeISO || p.shapeID || '' };
 }
 
 async function loadWardsData() {
@@ -2426,30 +2408,40 @@ function buildGeologyLegend() {
   geologyLegendCtrl = ctrl;
 }
 
+// BoundaryCanvas's GeoJSON processor silently ignores MultiPolygon (only handles
+// Polygon). Sierra Leone's ADM0 boundary is a MultiPolygon (it has offshore
+// islands). Converting to Leaflet's own LatLng[][][] format bypasses that gap —
+// BoundaryCanvas explicitly documents support for LatLng[][][].
+function geoJsonGeomToLatLng(geometry) {
+  const toLL = c => L.latLng(c[1], c[0]);
+  if (geometry.type === 'Polygon') {
+    return geometry.coordinates.map(ring => ring.map(toLL));
+  }
+  if (geometry.type === 'MultiPolygon') {
+    return geometry.coordinates.map(poly => poly.map(ring => ring.map(toLL)));
+  }
+  return null;
+}
+
 document.getElementById('geology-btn').addEventListener('click', async () => {
   geologyMode = !geologyMode;
   const btn = document.getElementById('geology-btn');
   btn.classList.toggle('active', geologyMode);
 
   if (geologyMode) {
-    // Build the layer once; subsequent toggles just add/remove it.
     if (!geologyLayer) {
       try {
         if (!sleBoundaryGJ) {
           const r = await fetch('https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/SLE/ADM0/geoBoundaries-SLE-ADM0.geojson');
+          if (!r.ok) throw new Error('SLE boundary ' + r.status);
           sleBoundaryGJ = await r.json();
         }
-        // Pass the Feature (not the FeatureCollection) to boundaryCanvas.
-        const boundary = sleBoundaryGJ.features ? sleBoundaryGJ.features[0] : sleBoundaryGJ;
+        const geom     = sleBoundaryGJ.features[0].geometry;
+        const boundary = geoJsonGeomToLatLng(geom);
+        if (!boundary) throw new Error('Unrecognised geometry type: ' + geom.type);
         geologyLayer = L.TileLayer.boundaryCanvas(
           'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
-          {
-            boundary:      boundary,
-            opacity:       0.80,
-            attribution:   '© Macrostrat · UW–Madison',
-            maxNativeZoom: 12,
-            maxZoom:       19,
-          }
+          { boundary, opacity: 0.80, attribution: '© Macrostrat · UW–Madison', maxNativeZoom: 12, maxZoom: 19 }
         );
       } catch (err) {
         console.error('Geology layer failed:', err);
