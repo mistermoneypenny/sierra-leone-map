@@ -2435,14 +2435,19 @@ function buildGeologyLegend() {
 async function ensureGeologyMask() {
   if (geologyMaskLayer) return geologyMaskLayer;
   try {
-    const meta   = await fetch('https://www.geoboundaries.org/api/current/gbOpen/SLE/ADM0/').then(r => r.json());
-    const sle    = await fetch(meta.gjDownloadURL).then(r => r.json());
-    const geom   = sle.features[0].geometry;
+    // Fetch directly from raw.githubusercontent.com — avoids the redirect chain
+    // that caused CORS failures with the geoBoundaries API gjDownloadURL.
+    const sle  = await fetch(
+      'https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/SLE/ADM0/geoBoundaries-SLE-ADM0.geojson'
+    ).then(r => { if (!r.ok) throw new Error('SLE ADM0 fetch ' + r.status); return r.json(); });
 
-    // World outer ring (counter-clockwise so the fill is the whole earth)
-    const worldRing = [[-180,-90],[180,-90],[180,90],[-180,90],[-180,-90]];
+    const geom = sle.features[0].geometry;
 
-    // Sierra Leone inner rings (holes). For MultiPolygon take each part's outer ring.
+    // Use [-179,-89] → [179,89] rather than ±180/±90 to avoid Leaflet's
+    // antimeridian-wrapping quirk with world-spanning polygons.
+    const worldRing = [[-179,-89],[179,-89],[179,89],[-179,89],[-179,-89]];
+
+    // Sierra Leone inner rings become transparent holes in the filled world.
     let innerRings = [];
     if (geom.type === 'Polygon') {
       innerRings = [geom.coordinates[0]];
@@ -2458,16 +2463,16 @@ async function ensureGeologyMask() {
 
     if (!map.getPane('geologyMaskPane')) {
       map.createPane('geologyMaskPane');
-      map.getPane('geologyMaskPane').style.zIndex       = 215;
+      map.getPane('geologyMaskPane').style.zIndex        = 215;
       map.getPane('geologyMaskPane').style.pointerEvents = 'none';
     }
 
     geologyMaskLayer = L.geoJSON(maskFeature, {
       pane: 'geologyMaskPane',
       style: {
-        fillColor:   '#f0ece4',   // CartoDB Positron approximate land colour
+        fillColor:   '#f0ece4',  // CartoDB Positron land colour
         fillOpacity: 0.97,
-        color:       '#888888',   // subtle SL border
+        color:       '#888888',  // subtle SL country border
         weight:      1.2,
         opacity:     0.55,
       },
@@ -2475,7 +2480,7 @@ async function ensureGeologyMask() {
     });
     return geologyMaskLayer;
   } catch (err) {
-    console.warn('Geology mask failed to load:', err);
+    console.error('Geology mask failed:', err);
     return null;
   }
 }
