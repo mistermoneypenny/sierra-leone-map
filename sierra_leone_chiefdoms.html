@@ -2427,21 +2427,16 @@ document.getElementById('geology-btn').addEventListener('click', async () => {
     }
     geologyLayer.addTo(map);
 
-    // Draw SL border outline on top of geology tiles so the boundary is clearly visible
+    // Draw SL border outline above geology tiles — rendered in overlay pane (z-index 400+)
+    // so it is guaranteed to sit above the geology tile pane (z-index 205).
     if (!geologyBorderLayer) {
       try {
         if (!sleBorderGJ) {
           const r = await fetch('sle_border.geojson');
           sleBorderGJ = await r.json();
         }
-        if (!map.getPane('geologyBorderPane')) {
-          map.createPane('geologyBorderPane');
-          map.getPane('geologyBorderPane').style.zIndex = 210;
-          map.getPane('geologyBorderPane').style.pointerEvents = 'none';
-        }
         geologyBorderLayer = L.geoJSON(sleBorderGJ, {
-          pane: 'geologyBorderPane',
-          style: { color: '#000', weight: 2.5, opacity: 0.85, fill: false },
+          style: { color: '#ffffff', weight: 5, opacity: 1, fill: false },
           interactive: false,
         });
       } catch (e) { console.warn('SL border overlay failed:', e); }
