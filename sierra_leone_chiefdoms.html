@@ -2378,7 +2378,6 @@ document.getElementById('election2023-btn').addEventListener('click', async () =
 // direct HTTP check. Pane z-index 210 sits above the basemap tile pane (200)
 // but below all vector overlay panes (400+), so geology colours show through
 // without obscuring chiefdoms, parliament, etc.
-// sleBoundaryGJ is cached after first fetch so subsequent toggles are instant.
 let geologyLayer = null, geologyMode = false, geologyLegendCtrl = null, sleBoundaryGJ = null;
 
 const GEOLOGY_PERIODS = [
@@ -2427,38 +2426,25 @@ function buildGeologyLegend() {
   geologyLegendCtrl = ctrl;
 }
 
-async function fetchSLEBoundary() {
-  if (sleBoundaryGJ) return sleBoundaryGJ;
-  const r = await fetch(
-    'https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/SLE/ADM0/geoBoundaries-SLE-ADM0.geojson'
-  );
-  if (!r.ok) throw new Error('SLE boundary fetch ' + r.status);
-  sleBoundaryGJ = await r.json();
-  return sleBoundaryGJ;
-}
-
 document.getElementById('geology-btn').addEventListener('click', async () => {
   geologyMode = !geologyMode;
   const btn = document.getElementById('geology-btn');
   btn.classList.toggle('active', geologyMode);
 
   if (geologyMode) {
+    // Build the layer once; subsequent toggles just add/remove it.
     if (!geologyLayer) {
-      btn.classList.add('loading');
-      btn.querySelector('.cmd-label').textContent = 'Loading…';
       try {
-        const boundary = await fetchSLEBoundary();
-        // L.TileLayer.BoundaryCanvas clips the raster tile layer to the
-        // supplied GeoJSON boundary at canvas level — no mask polygon needed.
-        if (!map.getPane('geologyPane')) {
-          map.createPane('geologyPane');
-          map.getPane('geologyPane').style.zIndex = 210;
+        if (!sleBoundaryGJ) {
+          const r = await fetch('https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/SLE/ADM0/geoBoundaries-SLE-ADM0.geojson');
+          sleBoundaryGJ = await r.json();
         }
+        // Pass the Feature (not the FeatureCollection) to boundaryCanvas.
+        const boundary = sleBoundaryGJ.features ? sleBoundaryGJ.features[0] : sleBoundaryGJ;
         geologyLayer = L.TileLayer.boundaryCanvas(
           'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
           {
             boundary:      boundary,
-            pane:          'geologyPane',
             opacity:       0.80,
             attribution:   '© Macrostrat · UW–Madison',
             maxNativeZoom: 12,
@@ -2469,18 +2455,14 @@ document.getElementById('geology-btn').addEventListener('click', async () => {
         console.error('Geology layer failed:', err);
         geologyMode = false;
         btn.classList.remove('active');
-        btn.querySelector('.cmd-label').textContent = 'Geological Units';
-        btn.classList.remove('loading');
         return;
       }
-      btn.querySelector('.cmd-label').textContent = 'Geological Units';
-      btn.classList.remove('loading');
     }
     geologyLayer.addTo(map);
     buildGeologyLegend();
     if (geoLayer) geoLayer.bringToFront();
   } else {
-    if (geologyLayer)      { geologyLayer.remove(); geologyLayer = null; }
+    if (geologyLayer)      geologyLayer.remove();
     if (geologyLegendCtrl) { geologyLegendCtrl.remove(); geologyLegendCtrl = null; }
   }
 });
