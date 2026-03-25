@@ -301,15 +301,18 @@
     #command-panel {
       position: absolute;
       right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
+      top: 14px;
+      bottom: 14px;
       z-index: 1000;
       width: 220px;
       background: rgba(255,255,255,0.98);
       border-radius: 12px;
       box-shadow: 0 4px 24px rgba(0,0,0,0.18);
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
       font-family: inherit;
+      display: flex;
+      flex-direction: column;
     }
     .cmd-header {
       background: linear-gradient(135deg, #1b5e35, #2c7a4b);
