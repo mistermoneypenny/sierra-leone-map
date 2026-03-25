@@ -2377,7 +2377,7 @@ document.getElementById('election2023-btn').addEventListener('click', async () =
 // direct HTTP check. Pane z-index 210 sits above the basemap tile pane (200)
 // but below all vector overlay panes (400+), so geology colours show through
 // without obscuring chiefdoms, parliament, etc.
-let geologyLayer = null, geologyMode = false, geologyLegendCtrl = null;
+let geologyLayer = null, geologyMode = false, geologyLegendCtrl = null, geologyMaskLayer = null;
 
 // International Commission on Stratigraphy standard colours, youngest → oldest.
 // Sierra Leone geology is dominated by Paleoproterozoic/Archean craton rocks,
@@ -2428,7 +2428,59 @@ function buildGeologyLegend() {
   geologyLegendCtrl = ctrl;
 }
 
-document.getElementById('geology-btn').addEventListener('click', () => {
+// Fetch Sierra Leone national boundary once and build an inverted polygon mask
+// (world bounding-box with SL as a transparent hole) so geology tiles only
+// show inside Sierra Leone. Pane z-index 215 sits above geology (210) but
+// below all vector overlay panes (400+). pointer-events:none passes clicks.
+async function ensureGeologyMask() {
+  if (geologyMaskLayer) return geologyMaskLayer;
+  try {
+    const meta   = await fetch('https://www.geoboundaries.org/api/current/gbOpen/SLE/ADM0/').then(r => r.json());
+    const sle    = await fetch(meta.gjDownloadURL).then(r => r.json());
+    const geom   = sle.features[0].geometry;
+
+    // World outer ring (counter-clockwise so the fill is the whole earth)
+    const worldRing = [[-180,-90],[180,-90],[180,90],[-180,90],[-180,-90]];
+
+    // Sierra Leone inner rings (holes). For MultiPolygon take each part's outer ring.
+    let innerRings = [];
+    if (geom.type === 'Polygon') {
+      innerRings = [geom.coordinates[0]];
+    } else if (geom.type === 'MultiPolygon') {
+      innerRings = geom.coordinates.map(p => p[0]);
+    }
+
+    const maskFeature = {
+      type: 'Feature',
+      geometry: { type: 'Polygon', coordinates: [worldRing, ...innerRings] },
+      properties: {},
+    };
+
+    if (!map.getPane('geologyMaskPane')) {
+      map.createPane('geologyMaskPane');
+      map.getPane('geologyMaskPane').style.zIndex       = 215;
+      map.getPane('geologyMaskPane').style.pointerEvents = 'none';
+    }
+
+    geologyMaskLayer = L.geoJSON(maskFeature, {
+      pane: 'geologyMaskPane',
+      style: {
+        fillColor:   '#f0ece4',   // CartoDB Positron approximate land colour
+        fillOpacity: 0.97,
+        color:       '#888888',   // subtle SL border
+        weight:      1.2,
+        opacity:     0.55,
+      },
+      interactive: false,
+    });
+    return geologyMaskLayer;
+  } catch (err) {
+    console.warn('Geology mask failed to load:', err);
+    return null;
+  }
+}
+
+document.getElementById('geology-btn').addEventListener('click', async () => {
   geologyMode = !geologyMode;
   document.getElementById('geology-btn').classList.toggle('active', geologyMode);
   if (geologyMode) {
@@ -2449,10 +2501,13 @@ document.getElementById('geology-btn').addEventListener('click', () => {
       );
     }
     geologyLayer.addTo(map);
+    const mask = await ensureGeologyMask();
+    if (mask) mask.addTo(map);
     buildGeologyLegend();
     if (geoLayer) geoLayer.bringToFront();
   } else {
-    if (geologyLayer) geologyLayer.remove();
+    if (geologyLayer)      geologyLayer.remove();
+    if (geologyMaskLayer)  geologyMaskLayer.remove();
     if (geologyLegendCtrl) { geologyLegendCtrl.remove(); geologyLegendCtrl = null; }
   }
 });
