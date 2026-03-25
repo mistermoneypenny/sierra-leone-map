@@ -6,7 +6,6 @@
   <title>Sierra Leone – Paramount Chiefdoms</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-boundary-canvas@1.0.0/src/BoundaryCanvas.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2358,7 +2357,7 @@ document.getElementById('election2023-btn').addEventListener('click', async () =
 // direct HTTP check. Pane z-index 210 sits above the basemap tile pane (200)
 // but below all vector overlay panes (400+), so geology colours show through
 // without obscuring chiefdoms, parliament, etc.
-let geologyLayer = null, geologyMode = false, geologyLegendCtrl = null, sleBoundaryGJ = null;
+let geologyLayer = null, geologyMode = false, geologyLegendCtrl = null;
 
 const GEOLOGY_PERIODS = [
   { color: '#F9F97F', label: 'Quaternary',       age: '< 2.6 Ma'      },
@@ -2406,31 +2405,22 @@ function buildGeologyLegend() {
   geologyLegendCtrl = ctrl;
 }
 
-document.getElementById('geology-btn').addEventListener('click', async () => {
+document.getElementById('geology-btn').addEventListener('click', () => {
   geologyMode = !geologyMode;
   const btn = document.getElementById('geology-btn');
   btn.classList.toggle('active', geologyMode);
 
   if (geologyMode) {
     if (!geologyLayer) {
-      try {
-        if (!sleBoundaryGJ) {
-          const r = await fetch('sle_border.geojson');
-          if (!r.ok) throw new Error('sle_border.geojson fetch failed: ' + r.status);
-          sleBoundaryGJ = await r.json();
-        }
-        // Pass the GeoJSON Feature directly — BoundaryCanvas handles Feature/MultiPolygon natively.
-        // Factory is L.TileLayer.boundaryCanvas (uppercase T), not L.tileLayer.boundaryCanvas.
-        geologyLayer = L.TileLayer.boundaryCanvas(
-          'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
-          { boundary: sleBoundaryGJ.features[0], opacity: 0.85, attribution: '© Macrostrat · UW–Madison', maxNativeZoom: 12, maxZoom: 19 }
-        );
-      } catch (err) {
-        console.error('Geology layer failed:', err);
-        geologyMode = false;
-        btn.classList.remove('active');
-        return;
+      if (!map.getPane('geologyPane')) {
+        map.createPane('geologyPane');
+        map.getPane('geologyPane').style.zIndex = 205;
+        map.getPane('geologyPane').style.pointerEvents = 'none';
       }
+      geologyLayer = L.tileLayer(
+        'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',
+        { pane: 'geologyPane', opacity: 0.85, attribution: '© Macrostrat · UW–Madison', maxNativeZoom: 12, maxZoom: 19 }
+      );
     }
     geologyLayer.addTo(map);
     buildGeologyLegend();
