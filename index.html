@@ -2454,17 +2454,19 @@ document.getElementById('geology-btn').addEventListener('click', () => {
 //   SW corner: [6.9, -13.5]   NE corner: [10.0, -10.2]
 // (i.e. remove legend, scale bar, north arrow, inset photo — geological colors only)
 
-let mineralisationOverlay = null, mineralisationMode = false, mineralisationLegendCtrl = null;
+let mineralisationLayer = null, mineralisationMode = false, mineralisationLegendCtrl = null;
 
 const MINERAL_LEGEND = [
-  { name:'Bullom Group',             color:'#F0E878' },
-  { name:'Freetown Complex',         color:'#2D7A3A' },
-  { name:'Rokel River Group',        color:'#3A6FAE' },
-  { name:'Marampa Group',            color:'#D0352A' },
-  { name:'Kasila Group',             color:'#8EC6D8' },
-  { name:'Greenstone Belts',         color:'#5A9E48' },
+  { name:'Bullom Group',               color:'#F0E878' },
+  { name:'Freetown Complex',           color:'#2D7A3A' },
+  { name:'Rokel River Group',          color:'#3A6FAE' },
+  { name:'Marampa Group',              color:'#D0352A' },
+  { name:'Kasila Group',               color:'#8EC6D8' },
+  { name:'Greenstone Belts',           color:'#5A9E48' },
   { name:'Granite-Greenstone Terrain', color:'#D4C4A0' },
 ];
+
+const MINERAL_COLOR = Object.fromEntries(MINERAL_LEGEND.map(u => [u.name, u.color]));
 
 function buildMineralisationLegend() {
   if (mineralisationLegendCtrl) { mineralisationLegendCtrl.remove(); }
@@ -2489,20 +2491,24 @@ document.getElementById('mineralisation-btn').addEventListener('click', () => {
   mineralisationMode = !mineralisationMode;
   document.getElementById('mineralisation-btn').classList.toggle('active', mineralisationMode);
   if (mineralisationMode) {
-    if (!mineralisationOverlay) {
-      // Bounds: SW [6.9, -13.5] → NE [10.0, -10.2]
-      // mineralisation_map.png must be cropped to exactly this extent
-      const bounds = L.latLngBounds([[6.9, -13.5], [10.0, -10.2]]);
-      mineralisationOverlay = L.imageOverlay('mineralisation_map.png', bounds, {
-        opacity: 0.88,
-        interactive: false,
+    if (!mineralisationLayer) {
+      mineralisationLayer = L.geoJSON(GEOLOGY_GJ, {
+        style: f => ({
+          fillColor: MINERAL_COLOR[f.properties.group] || '#D4C4A0',
+          fillOpacity: 0.72,
+          color: 'rgba(0,0,0,0.2)',
+          weight: 0.5,
+        }),
+        onEachFeature: (f, layer) => {
+          layer.bindTooltip(f.properties.group, { sticky: true, direction: 'top', offset: [0, -4] });
+        },
       });
     }
-    mineralisationOverlay.addTo(map);
+    mineralisationLayer.addTo(map);
     buildMineralisationLegend();
     if (geoLayer) geoLayer.bringToFront();
   } else {
-    if (mineralisationOverlay) mineralisationOverlay.remove();
+    if (mineralisationLayer) mineralisationLayer.remove();
     if (mineralisationLegendCtrl) { mineralisationLegendCtrl.remove(); mineralisationLegendCtrl = null; }
   }
 });
