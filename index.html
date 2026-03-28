@@ -2442,6 +2442,7 @@ document.getElementById('geology-btn').addEventListener('click', () => {
   geologyMode = !geologyMode;
   document.getElementById('geology-btn').classList.toggle('active', geologyMode);
   if (geologyMode && Object.keys(chiefdomGeoUnit).length === 0) assignGeoUnits();
+  if (geologyMode && geoLayer && !map.hasLayer(geoLayer)) geoLayer.addTo(map);
   if (geoLayer) geoLayer.setStyle(f => featureStyle(f));
   if (geologyMode) { buildGeologyLegend(); if (geoLayer) geoLayer.bringToFront(); }
   else if (geologyLegendCtrl) { geologyLegendCtrl.remove(); geologyLegendCtrl = null; }
