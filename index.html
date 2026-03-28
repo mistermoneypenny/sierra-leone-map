@@ -661,6 +661,17 @@
     <div class="cmd-header">🗺 Map Layers</div>
 
     <div class="cmd-section">
+      <div class="cmd-section-label">Base Map</div>
+      <select id="basemap-select" style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid #ddd;font-size:12px;background:#fff;cursor:pointer;margin-bottom:2px">
+        <option value="Light">Light</option>
+        <option value="Google Maps">Google Maps</option>
+        <option value="Google Hybrid">Google Hybrid</option>
+        <option value="Satellite">Satellite</option>
+        <option value="Dark">Dark</option>
+      </select>
+    </div>
+
+    <div class="cmd-section">
       <div class="cmd-section-label">Boundaries</div>
       <div class="cmd-row" id="chiefdom-btn" title="Toggle paramount chiefdom boundaries">
         <span class="cmd-icon">🗾</span>
@@ -952,7 +963,12 @@ const baseLayers = {
                       { attribution: '© CartoDB © OpenStreetMap' }),
 };
 baseLayers['Light'].addTo(map);
-L.control.layers(baseLayers, {}, { position: 'topright', collapsed: true }).addTo(map);
+let activeBaseLayer = baseLayers['Light'];
+document.getElementById('basemap-select').addEventListener('change', function() {
+  activeBaseLayer.remove();
+  activeBaseLayer = baseLayers[this.value];
+  activeBaseLayer.addTo(map);
+});
 
 // ─── GeoJSON layer globals ───────────────────────────────────────────────────
 let geoLayer = null;
