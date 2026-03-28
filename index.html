@@ -2449,7 +2449,7 @@ document.getElementById('geology-btn').addEventListener('click', () => {
 });
 
 // ─── Mineralisation Layer ──────────────────────────────────────────────────────
-// Uses geology_map.png as a direct image overlay (Jalloh et al. 2013).
+// Uses mineralisation_map.png as a direct image overlay (Jalloh et al. 2013).
 // The image should be cropped to Sierra Leone's geographic extent:
 //   SW corner: [6.9, -13.5]   NE corner: [10.0, -10.2]
 // (i.e. remove legend, scale bar, north arrow, inset photo — geological colors only)
@@ -2492,9 +2492,9 @@ document.getElementById('mineralisation-btn').addEventListener('click', () => {
   if (mineralisationMode) {
     if (!mineralisationOverlay) {
       // Bounds: SW [6.9, -13.5] → NE [10.0, -10.2]
-      // geology_map.png must be cropped to exactly this extent
+      // mineralisation_map.png must be cropped to exactly this extent
       const bounds = L.latLngBounds([[6.9, -13.5], [10.0, -10.2]]);
-      mineralisationOverlay = L.imageOverlay('geology_map.png', bounds, {
+      mineralisationOverlay = L.imageOverlay('mineralisation_map.png', bounds, {
         opacity: 0.88,
         interactive: false,
         crossOrigin: true,
