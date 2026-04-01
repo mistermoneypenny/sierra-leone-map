@@ -375,6 +375,20 @@
       transition: left 0.18s;
     }
     .cmd-row.active   .cmd-pill { background: #2c7a4b; }
+    .layer-order-btns { display:none; align-items:center; gap:3px; margin-right:7px; }
+    .cmd-row.active .layer-order-btns { display:flex; }
+    .lo-btn {
+      background: none; border: 1px solid rgba(44,122,75,0.45); border-radius:3px;
+      color:#2c7a4b; cursor:pointer; font-size:10px; line-height:1; padding:2px 5px;
+      transition: background 0.15s;
+    }
+    .lo-btn:hover { background: rgba(44,122,75,0.14); }
+    .lo-btn[disabled] { opacity:0.22; cursor:default; pointer-events:none; }
+    .lo-top-badge {
+      font-size:9px; font-weight:700; color:#fff; background:#2c7a4b;
+      border-radius:3px; padding:1px 4px; margin-right:5px; white-space:nowrap;
+      flex-shrink:0;
+    }
     .cmd-row.active   .cmd-pill::after { left: 17px; }
     .cmd-row.loading  .cmd-pill { background: #f5a623; }
     /* Mining sub-category rows (inside panel) */
@@ -1141,6 +1155,7 @@ function onClick(e) {
     </div>`;
   }
 
+  const topLayerHtml = typeof _popLayerInfo === 'function' ? _popLayerInfo(p) : '';
   L.popup({ maxWidth: 320, className: '' })
     .setLatLng(e.latlng)
     .setContent(
@@ -1149,6 +1164,7 @@ function onClick(e) {
         <div class="pop-sub">Paramount Chiefdom · Sierra Leone</div>
        </div>
        <div class="pop-body">
+        ${topLayerHtml}
         ${chiefHtml}
         ${dist !== '—' ? `<div class="pop-row"><span class="pl">District</span><span>${dist}</span></div>` : ''}
         <div class="pop-row">
@@ -2666,6 +2682,150 @@ document.getElementById('mineralisation-btn').addEventListener('click', () => {
   `;
   document.head.appendChild(s);
 })();
+
+// ─── Layer Order Manager ──────────────────────────────────────────────────────
+// Each entry maps a cmd-row button ID → a function that returns the live Leaflet
+// layer (or null if not yet created). Order in this array is display order only;
+// runtime order is tracked in activeLayerOrder[].
+const ORDERABLE = [
+  { id: 'chiefdom-btn',       label: 'Chiefdoms',          getLayer: () => geoLayer            },
+  { id: 'ethnicity-btn',      label: 'Ethnicity',          getLayer: () => ethnicityLayer       },
+  { id: 'religion-btn',       label: 'Religion',           getLayer: () => religionLayer        },
+  { id: 'geology-btn',        label: 'Geological Units',   getLayer: () => geoLayer            },
+  { id: 'mineralisation-btn', label: 'Mineralisation',     getLayer: () => mineralisationLayer  },
+  { id: 'parliament-btn',     label: 'Parliament',         getLayer: () => parliamentLayer      },
+  { id: 'wards-btn',          label: 'Wards',              getLayer: () => wardsLayer           },
+  { id: 'mining-btn',         label: 'Mining Concessions', getLayer: () => null                 }, // sub-layers handled separately
+  { id: 'minerals-btn',       label: 'Mineral Deposits',   getLayer: () => mineralsLayer        },
+  { id: 'rivers-btn',         label: 'Rivers',             getLayer: () => riversLayer          },
+  { id: 'roads-btn',          label: 'Roads',              getLayer: () => roadsLayer           },
+  { id: 'popdensity-btn',     label: 'Population',         getLayer: () => popDensityLayer      },
+  { id: 'election2023-btn',   label: 'Election Results',   getLayer: () => election2023Layer    },
+];
+
+let activeLayerOrder = []; // btn IDs, index 0 = topmost / front
+
+function _applyZOrder() {
+  // bringToFront from bottom → top so index-0 ends up on top
+  for (let i = activeLayerOrder.length - 1; i >= 0; i--) {
+    const cfg = ORDERABLE.find(o => o.id === activeLayerOrder[i]);
+    if (!cfg) continue;
+    if (cfg.id === 'mining-btn') {
+      Object.values(miningTypeLayers).forEach(l => { if (map.hasLayer(l)) l.bringToFront(); });
+    } else {
+      const l = cfg.getLayer();
+      if (l && map.hasLayer(l)) l.bringToFront();
+    }
+  }
+}
+
+function _refreshOrderUI() {
+  // Update badge + button disabled state for every registered row
+  for (const cfg of ORDERABLE) {
+    const row = document.getElementById(cfg.id);
+    if (!row) continue;
+    const idx    = activeLayerOrder.indexOf(cfg.id);
+    const atTop  = idx === 0;
+    const active = idx >= 0;
+    // badge
+    let badge = row.querySelector('.lo-top-badge');
+    if (atTop && activeLayerOrder.length > 1) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'lo-top-badge';
+        badge.textContent = 'TOP';
+        row.querySelector('.cmd-label').after(badge);
+      }
+    } else {
+      badge?.remove();
+    }
+    // buttons
+    const upBtn  = row.querySelector('.lo-btn.lo-up');
+    const topBtn = row.querySelector('.lo-btn.lo-top');
+    if (!upBtn) continue;
+    upBtn.disabled  = !active || atTop;
+    topBtn.disabled = !active || atTop;
+  }
+}
+
+function loMoveUp(btnId) {
+  const i = activeLayerOrder.indexOf(btnId);
+  if (i <= 0) return;
+  [activeLayerOrder[i - 1], activeLayerOrder[i]] = [activeLayerOrder[i], activeLayerOrder[i - 1]];
+  _refreshOrderUI();
+  _applyZOrder();
+}
+
+function loBringToFront(btnId) {
+  if (!activeLayerOrder.includes(btnId)) return;
+  activeLayerOrder = [btnId, ...activeLayerOrder.filter(x => x !== btnId)];
+  _refreshOrderUI();
+  _applyZOrder();
+}
+
+function loLayerOn(btnId)  { if (!activeLayerOrder.includes(btnId)) activeLayerOrder.unshift(btnId); _refreshOrderUI(); _applyZOrder(); }
+function loLayerOff(btnId) { activeLayerOrder = activeLayerOrder.filter(x => x !== btnId); _refreshOrderUI(); }
+
+// Inject ↑ and ⬆ Front buttons into every registered cmd-row
+for (const cfg of ORDERABLE) {
+  const row = document.getElementById(cfg.id);
+  if (!row) continue;
+  const pill = row.querySelector('.cmd-pill');
+  const wrap = document.createElement('span');
+  wrap.className = 'layer-order-btns';
+  wrap.innerHTML =
+    '<button class="lo-btn lo-top" title="Bring to front">⬆ Front</button>' +
+    '<button class="lo-btn lo-up"  title="Move up one">↑</button>';
+  wrap.querySelector('.lo-top').addEventListener('click', e => { e.stopPropagation(); loBringToFront(cfg.id); });
+  wrap.querySelector('.lo-up') .addEventListener('click', e => { e.stopPropagation(); loMoveUp(cfg.id); });
+  row.insertBefore(wrap, pill);
+}
+
+// MutationObserver: hook into existing toggle handlers without modifying them —
+// fires whenever a cmd-row gains or loses the 'active' class.
+const _loObserver = new MutationObserver(mutations => {
+  for (const m of mutations) {
+    if (m.attributeName !== 'class') continue;
+    const row = m.target;
+    if (!ORDERABLE.find(o => o.id === row.id)) continue;
+    if (row.classList.contains('active')) loLayerOn(row.id);
+    else loLayerOff(row.id);
+  }
+});
+for (const cfg of ORDERABLE) {
+  const row = document.getElementById(cfg.id);
+  if (row) _loObserver.observe(row, { attributes: true, attributeFilter: ['class'] });
+}
+
+// ─── Click popup: show top active layer's data first ────────────────────────
+// Patch onClick to prepend a "top layer" info row when a data layer is on top.
+const _origOnClick = onClick;
+// Redefine onClick so the popup includes top-layer context
+// (religion %, ethnic group, geology unit) when a relevant layer leads.
+const _popLayerInfo = (p) => {
+  const topId = activeLayerOrder[0];
+  if (!topId || topId === 'chiefdom-btn') return '';
+  if (topId === 'religion-btn' && religionMode) {
+    const pct = getChiefdomPct(p);
+    const col = pctMuslimColor(pct);
+    return `<div class="pop-row" style="border-left:3px solid ${col};padding-left:8px;margin-bottom:2px">
+      <span class="pl">Religion (top)</span>
+      <span><b>${pct}%</b> Muslim · ~${100-pct}% Christian</span></div>`;
+  }
+  if (topId === 'ethnicity-btn' && ethnicityMode) {
+    const eth = getChiefdomEthnic(p);
+    const cfg2 = eth ? ETHNICITIES[eth] : null;
+    if (cfg2) return `<div class="pop-row" style="border-left:3px solid ${cfg2.color};padding-left:8px;margin-bottom:2px">
+      <span class="pl">Ethnicity (top)</span>
+      <span><span class="pop-prov-dot" style="background:${cfg2.color}"></span>${cfg2.label}</span></div>`;
+  }
+  if (topId === 'geology-btn' && geologyMode) {
+    const unit = chiefdomGeoUnit[chiefdomName(p)] || 'Granite-Greenstone Terrain';
+    return `<div class="pop-row" style="border-left:3px solid #888;padding-left:8px;margin-bottom:2px">
+      <span class="pl">Geology (top)</span><span>${unit}</span></div>`;
+  }
+  return '';
+};
 </script>
 </body>
 </html>
