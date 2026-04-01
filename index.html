@@ -683,6 +683,11 @@
         <span class="cmd-label">Ethnicity</span>
         <div class="cmd-pill"></div>
       </div>
+      <div class="cmd-row" id="religion-btn" title="Toggle dominant religion by chiefdom">
+        <span class="cmd-icon">☪</span>
+        <span class="cmd-label">Religion</span>
+        <div class="cmd-pill"></div>
+      </div>
       <div class="cmd-row" id="parliament-btn" title="Toggle parliamentary constituency boundaries">
         <span class="cmd-icon">🏛</span>
         <span class="cmd-label">Parliament</span>
@@ -916,6 +921,86 @@ const CHIEFDOM_ETHNIC = {
 
 function getChiefdomEthnic(props) {
   return CHIEFDOM_ETHNIC[props.NAME_3] || DISTRICT_ETHNIC[props.NAME_2] || null;
+}
+
+// ─── Religion layer ───────────────────────────────────────────────────────────
+// Dominant religion by chiefdom based on 2015 census & district survey data.
+// Sierra Leone overall: ~78% Muslim, ~21% Christian, ~1% traditional/other.
+const RELIGIONS = {
+  'Muslim':          { color: '#2E7D32', label: 'Predominantly Muslim (>75%)'  },
+  'MajorityMuslim':  { color: '#81C784', label: 'Majority Muslim (60–75%)'     },
+  'Mixed':           { color: '#FFA726', label: 'Mixed / Even Split'            },
+  'MajorityChristian': { color: '#5C9BD4', label: 'Majority Christian (>50%)' },
+};
+
+// District-level defaults (NAME_2 → religion key)
+const DISTRICT_RELIGION = {
+  'WesternUrban': 'Mixed',          // Freetown ~60% M / 37% C
+  'WesternRural': 'MajorityMuslim', // ~65% M / 32% C
+  'Kambia':       'Muslim',         // ~92% M
+  'PortLoko':     'Muslim',         // ~88% M
+  'Tonkolili':    'Muslim',         // ~85% M
+  'Bombali':      'Muslim',         // ~87% M
+  'Koinadugu':    'Muslim',         // ~92% M
+  'Falaba':       'Muslim',         // ~92% M
+  'Karene':       'Muslim',         // ~88% M
+  'Kailahun':     'Muslim',         // ~80% M
+  'Kenema':       'MajorityMuslim', // ~70% M / 26% C
+  'Kono':         'MajorityMuslim', // ~65% M / 30% C
+  'Bo':           'MajorityMuslim', // ~63% M / 33% C
+  'Pujehun':      'Muslim',         // ~75% M
+  'Moyamba':      'MajorityMuslim', // ~60% M / 37% C
+  'Bonthe':       'Mixed',          // ~52% M / 44% C (most Christian district)
+};
+
+// Chiefdom-level overrides (NAME_3 → religion key)
+const CHIEFDOM_RELIGION = {
+  // Bonthe island chiefdoms — historically Christian (Sherbro/Krio missions)
+  'Bonthe':        'MajorityChristian',
+  'Jong':          'MajorityChristian',
+  // Coastal Moyamba — Sherbro Christian communities
+  'Kagboro':       'Mixed',
+  'Ribbi':         'Mixed',
+  // Kono — significant Christian diamond mining communities
+  'Gbense':        'Mixed',
+  'Nimikoro':      'Mixed',
+  // Western Area peri-urban chiefdoms
+  'Koya':          'Mixed',
+  'Bureh Kasseh Maconteh': 'MajorityMuslim',
+};
+
+function getChiefdomReligion(props) {
+  return CHIEFDOM_RELIGION[props.NAME_3] || DISTRICT_RELIGION[props.NAME_2] || 'Muslim';
+}
+
+function religionStyleFn(feature) {
+  const rel = getChiefdomReligion(feature.properties);
+  const cfg = RELIGIONS[rel] || RELIGIONS['Muslim'];
+  return { fillColor: cfg.color, fillOpacity: 0.72, color: 'rgba(255,255,255,0.5)', weight: 0.5 };
+}
+
+let religionMode  = false;
+let religionLayer = null;
+let relLegendCtrl = null;
+
+function buildReligionLegend() {
+  if (relLegendCtrl) { relLegendCtrl.remove(); relLegendCtrl = null; }
+  const ctrl = L.control({ position: 'bottomleft' });
+  ctrl.onAdd = function() {
+    const div = L.DomUtil.create('div', 'map-legend');
+    div.innerHTML = '<h3>Dominant Religion</h3>'
+      + '<span style="font-size:10px;color:#888;display:block;margin-bottom:8px">2015 Census · by chiefdom</span>';
+    for (const [, cfg] of Object.entries(RELIGIONS)) {
+      div.innerHTML +=
+        `<div style="display:flex;align-items:center;gap:7px;margin:3px 0">` +
+        `<span style="display:inline-block;width:13px;height:13px;background:${cfg.color};border:1px solid rgba(0,0,0,0.18);border-radius:2px;flex-shrink:0"></span>` +
+        `<span style="font-size:11px">${cfg.label}</span></div>`;
+    }
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  ctrl.addTo(map);
+  relLegendCtrl = ctrl;
 }
 
 let chiefdomMode  = false;
@@ -1207,6 +1292,28 @@ document.getElementById('ethnicity-btn').addEventListener('click', () => {
     if (ethLegendCtrl) { ethLegendCtrl.remove(); ethLegendCtrl = null; }
     if (chiefdomMode) provinceLegendCtrl?.addTo(map);
     if (activeProvince) applyProvinceFilter(activeProvince, false);
+  }
+});
+
+// ─── Religion toggle ─────────────────────────────────────────────────────────
+document.getElementById('religion-btn').addEventListener('click', () => {
+  religionMode = !religionMode;
+  document.getElementById('religion-btn').classList.toggle('active', religionMode);
+  if (religionMode) {
+    if (!religionLayer && allFeatures.length) {
+      religionLayer = L.geoJSON({ type: 'FeatureCollection', features: allFeatures }, {
+        style: religionStyleFn,
+        interactive: false,
+      });
+    }
+    if (religionLayer) {
+      religionLayer.addTo(map);
+      if (geoLayer) geoLayer.bringToFront();
+    }
+    buildReligionLegend();
+  } else {
+    if (religionLayer) religionLayer.remove();
+    if (relLegendCtrl) { relLegendCtrl.remove(); relLegendCtrl = null; }
   }
 });
 
