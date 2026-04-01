@@ -927,14 +927,14 @@ function getChiefdomEthnic(props) {
 // Dominant religion by chiefdom based on 2015 census & district survey data.
 // Sierra Leone overall: ~78% Muslim, ~21% Christian, ~1% traditional/other.
 // ─── Religion layer — continuous % Muslim scale ───────────────────────────────
-// Source: 2015 Sierra Leone Population & Housing Census, district + chiefdom data.
+// Source: 2015 Sierra Leone Population & Housing Census (district level).
 // Color scale: deep green (100% Muslim) → amber (50/50) → deep blue (100% Christian).
 
-// District-level % Muslim baseline (2015 census)
+// District-level % Muslim (2015 census — Statistics Sierra Leone)
 const DISTRICT_PCT_MUSLIM = {
   'Koinadugu':    96,
-  'Falaba':       94,
   'Kambia':       95,
+  'Falaba':       94,
   'Karene':       92,
   'PortLoko':     91,
   'Bombali':      89,
@@ -948,78 +948,6 @@ const DISTRICT_PCT_MUSLIM = {
   'Moyamba':      63,
   'WesternUrban': 61,
   'Bonthe':       54,
-};
-
-// Chiefdom-level specific values where they differ meaningfully from district avg
-const CHIEFDOM_PCT_MUSLIM = {
-  // Bonthe district — historically Christianised Sherbro/Krio island communities
-  'Bonthe':              38,
-  'Jong':                40,
-  'Nongoba Bullom':      52,
-  'Kwamebai Krim':       53,
-  'Sittia':              51,
-  'Imperri':             55,
-  'Kpanda Kemoh':        57,
-  // Moyamba — coastal Sherbro chiefdoms with mission history
-  'Kagboro':             55,
-  'Ribbi':               57,
-  'Kori':                59,
-  'Dasse':               61,
-  'Timdale':             61,
-  // Kono district — diamond mining drew Christian migrant workers
-  'Gbense':              58,
-  'Nimikoro':            60,
-  'Tankoro':             62,
-  'Soa':                 64,
-  'Fiama':               65,
-  'Gorama Kono':         65,
-  'Lei':                 64,
-  'Gbane':               67,
-  'Gbane Kandor':        66,
-  // Western Area — Freetown suburbs / Krio homeland
-  'Koya':                62,
-  'Bureh Kasseh Maconteh': 68,
-  'Waterloo':            63,
-  // Kenema — some historically Christianised Mende chiefdoms in south
-  'Nomo':                68,
-  'Dama':                69,
-  'Koya Chiefdom':       70,
-  // Bo district variation
-  'Badjia':              63,
-  'Kakua':               65,
-  'Bagbo':               64,
-  'Niawa Lenga':         66,
-  // Pujehun district variation
-  'Soro Gbema':          74,
-  'Barri':               73,
-  'Malen':               77,
-  'Panga Krim':          71,
-  // Northern districts — some chiefdoms with Limba/Loko Christian minorities
-  'SafrokoLimba':        84,
-  'SellaLimba':          84,
-  'Libeisaygahun':       85,
-  'TonkoLimba':          86,
-  // Susu chiefdoms — almost entirely Muslim
-  'Bramaia':             97,
-  'Samu':                97,
-  'Mambolo':             95,
-  'BuyaRomende':         94,
-  'Dibia':               94,
-  'MagbembaGowahun':     96,
-  // Koranko / Fula in northeast — very high Muslim
-  'Tambakha':            94,
-  'Mongo':               95,
-  'Dembelia Sinkunia':   95,
-  'Neya':                95,
-  'Sengbe':              95,
-  // Kailahun — border chiefdoms
-  'Jawie':               81,
-  'Kissi Teng':          80,
-  'Kissi Kama':          80,
-  'Kissi Tongi':         80,
-  'Malema':              84,
-  'Penguia':             83,
-  'Yawei':               84,
 };
 
 function lerpColor(hexA, hexB, t) {
@@ -1055,7 +983,7 @@ function pctMuslimColor(pct) {
 }
 
 function getChiefdomPct(props) {
-  return CHIEFDOM_PCT_MUSLIM[props.NAME_3] ?? DISTRICT_PCT_MUSLIM[props.NAME_2] ?? 80;
+  return DISTRICT_PCT_MUSLIM[props.NAME_2] ?? 80;
 }
 
 function religionStyleFn(feature) {
