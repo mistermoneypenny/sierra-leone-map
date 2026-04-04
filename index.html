@@ -1089,21 +1089,18 @@ const baseLayers = {
 };
 baseLayers['Light'].addTo(map);
 let activeBaseLayer = baseLayers['Light'];
+
+// ─── Satellite country-border overlay ────────────────────────────────────────
+const satelliteBorders = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  { attribution: '© Esri', opacity: 0.6, pane: 'overlayPane' }
+);
+
 document.getElementById('basemap-select').addEventListener('change', function() {
   activeBaseLayer.remove();
   activeBaseLayer = baseLayers[this.value];
   activeBaseLayer.addTo(map);
-});
-
-// ─── Satellite country-border overlay ────────────────────────────────────────
-// Shown automatically when the Satellite base layer is active.
-const satelliteBorders = L.tileLayer(
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-  { attribution: '© Esri', opacity: 0.55, pane: 'overlayPane' }
-);
-
-map.on('baselayerchange', function (e) {
-  if (e.name === 'Satellite') {
+  if (this.value === 'Satellite') {
     if (!map.hasLayer(satelliteBorders)) satelliteBorders.addTo(map);
   } else {
     if (map.hasLayer(satelliteBorders)) map.removeLayer(satelliteBorders);
