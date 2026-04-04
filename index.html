@@ -2295,22 +2295,97 @@ document.getElementById('popdensity-btn').addEventListener('click', async () => 
 
 // ─── Mineral Deposits Layer ────────────────────────────────────────────────────
 const MINERAL_DEPOSITS = [
-  { name: 'Tonkolili Iron Ore',    commodity: 'Iron Ore',                 type: 'iron',    company: 'SL Mining Ltd',                    district: 'Tonkolili',       status: 'Active',      lat: 8.63,  lng: -11.78, notes: '~13 billion tonne magnetite resource in Sula Mountains; one of Africa\'s largest iron ore deposits' },
-  { name: 'Marampa Iron Ore',      commodity: 'Iron Ore',                 type: 'iron',    company: 'Marampa Mines (Gerald Group)',      district: 'Port Loko',       status: 'Development', lat: 8.68,  lng: -12.53, notes: 'High-grade hematite / magnetite near Lunsar; historic producer reopened' },
-  { name: 'Koidu Diamond Mine',    commodity: 'Diamond',                  type: 'diamond', company: 'Koidu Ltd (BSG Resources)',         district: 'Kono',            status: 'Active',      lat: 8.64,  lng: -10.97, notes: 'Kimberlite diamond mine; significant gem-quality production' },
-  { name: 'Tongo Diamond Field',   commodity: 'Diamond',                  type: 'diamond', company: 'Octéa Mining',                      district: 'Kenema',          status: 'Active',      lat: 7.92,  lng: -11.45, notes: 'Large kimberlite / alluvial diamond field' },
-  { name: 'Sierra Rutile',         commodity: 'Rutile, Ilmenite, Zircon', type: 'rutile',  company: 'Sierra Rutile Ltd (Iluka Resources)', district: 'Bonthe / Moyamba', status: 'Active',   lat: 7.75,  lng: -12.57, notes: 'World\'s largest natural rutile deposit; operating since 1979' },
-  { name: 'Nimini Hills Gold',     commodity: 'Gold',                     type: 'gold',    company: 'Exploration stage',                 district: 'Kono / Kenema',   status: 'Exploration', lat: 8.49,  lng: -11.12, notes: 'Greenstone-belt hosted gold; multiple exploration licences active' },
-  { name: 'Baomahun Gold',         commodity: 'Gold',                     type: 'gold',    company: 'Hummingbird Resources',             district: 'Bo',              status: 'Development', lat: 7.93,  lng: -11.93, notes: 'Positive feasibility study; advancing toward construction' },
-  { name: 'Mokanji Bauxite',       commodity: 'Bauxite',                  type: 'bauxite', company: 'SIEROMCO (historic)',               district: 'Moyamba',         status: 'Inactive',    lat: 7.92,  lng: -12.10, notes: 'Former bauxite exporter; significant known reserves remain' },
-  { name: 'Kangari Hills',         commodity: 'Diamond / Gold',           type: 'diamond', company: 'Various artisanal',                 district: 'Tonkolili / Bo',  status: 'Artisanal',   lat: 8.33,  lng: -11.68, notes: 'Alluvial diamond and gold-bearing area across chiefdom boundaries' },
+  // ── Iron Ore ────────────────────────────────────────────────────────────────
+  { name: 'Tonkolili Iron Ore',       commodity: 'Iron Ore',                  type: 'iron',     company: 'Leone Rock Metal Group (China Kingho)',  district: 'Tonkolili',        status: 'Active',      lat: 8.63,  lng: -11.78, notes: '~13.7 billion tonne magnetite resource; one of Africa\'s largest deposits. Phase I beneficiation plant (30Mt/a) completed 2025.' },
+  { name: 'Marampa Iron Ore',         commodity: 'Iron Ore',                  type: 'iron',     company: 'Marampa Mines (Gerald Group)',           district: 'Port Loko',        status: 'Development', lat: 8.68,  lng: -12.53, notes: 'High-grade hematite/magnetite near Lunsar; historic producer. Significant DSO and beneficiation potential.' },
+  { name: 'Sula Mountains Iron Ore',  commodity: 'Iron Ore',                  type: 'iron',     company: 'Various exploration licences',           district: 'Koinadugu',        status: 'Exploration', lat: 9.05,  lng: -11.45, notes: 'Large banded iron formation in the Sula Mountains; estimated billions of tonnes of lower-grade magnetite.' },
+  { name: 'Bumbuna Iron Ore',         commodity: 'Iron Ore',                  type: 'iron',     company: 'Exploration stage',                      district: 'Tonkolili',        status: 'Exploration', lat: 9.04,  lng: -11.74, notes: 'Iron mineralisation in the Bumbuna area; near the Bumbuna hydroelectric reservoir.' },
+  // ── Diamonds ────────────────────────────────────────────────────────────────
+  { name: 'Koidu Kimberlite Mine',    commodity: 'Diamond (kimberlite)',      type: 'diamond',  company: 'Koidu Ltd (BSG Resources)',              district: 'Kono',             status: 'Active',      lat: 8.64,  lng: -10.97, notes: 'Primary kimberlite mine; two pipes (K1, K2). Significant gem-quality production; among highest $/ct kimberlite operations globally.' },
+  { name: 'Tongo Diamond Field',      commodity: 'Diamond (kimberlite)',      type: 'diamond',  company: 'Octéa Mining',                           district: 'Kenema',           status: 'Active',      lat: 7.92,  lng: -11.45, notes: 'Large kimberlite field with multiple dykes; high-value gem diamonds. ~134 km² licence area.' },
+  { name: 'Tonguma Kimberlites',      commodity: 'Diamond (kimberlite)',      type: 'diamond',  company: 'Various / exploration',                  district: 'Kenema',           status: 'Exploration', lat: 7.78,  lng: -11.28, notes: '11 known kimberlite dykes; 8.3 Mct JORC-compliant resource. Located south of Tongo field.' },
+  { name: 'Yengema Diamond Area',     commodity: 'Diamond (alluvial)',        type: 'diamond',  company: 'Various artisanal / small-scale',        district: 'Kono',             status: 'Artisanal',   lat: 8.59,  lng: -11.07, notes: 'Historic centre of diamond mining in Sierra Leone; intensive alluvial workings across the Yengema basin.' },
+  { name: 'Woyie River Diamonds',     commodity: 'Diamond (alluvial)',        type: 'diamond',  company: 'Various artisanal',                      district: 'Kono',             status: 'Artisanal',   lat: 8.62,  lng: -11.15, notes: 'Alluvial diamond placers along the Woyie River; part of the broader Kono diamond district.' },
+  { name: 'Njaiama Sewafe Diamonds',  commodity: 'Diamond (alluvial)',        type: 'diamond',  company: 'Various artisanal / small-scale',        district: 'Kono',             status: 'Artisanal',   lat: 8.53,  lng: -10.93, notes: 'Active alluvial workings on Sewa River tributaries east of Koidu.' },
+  { name: 'Sewa River Diamonds',      commodity: 'Diamond (alluvial)',        type: 'diamond',  company: 'Various artisanal',                      district: 'Bo / Kenema',      status: 'Artisanal',   lat: 7.58,  lng: -11.72, notes: 'Extensive alluvial diamond placers along the Sewa River; one of Sierra Leone\'s most productive diamond-bearing rivers.' },
+  { name: 'Moa River Diamonds',       commodity: 'Diamond (alluvial)',        type: 'diamond',  company: 'Various artisanal',                      district: 'Kailahun',         status: 'Artisanal',   lat: 7.85,  lng: -10.78, notes: 'Alluvial diamond-bearing gravels along the Moa River in eastern Sierra Leone.' },
+  { name: 'Pujehun Diamond Placers',  commodity: 'Diamond (alluvial)',        type: 'diamond',  company: 'Various artisanal',                      district: 'Pujehun',          status: 'Artisanal',   lat: 7.47,  lng: -11.42, notes: 'Moa River alluvial workings in the south; lesser-known but productive diamond-bearing area.' },
+  { name: 'Kangari Hills',            commodity: 'Diamond / Gold',           type: 'diamond',  company: 'Various artisanal',                      district: 'Tonkolili / Bo',   status: 'Artisanal',   lat: 8.33,  lng: -11.68, notes: 'Alluvial diamond and gold-bearing area straddling multiple chiefdom boundaries.' },
+  // ── Gold ────────────────────────────────────────────────────────────────────
+  { name: 'Baomahun Gold',            commodity: 'Gold',                      type: 'gold',     company: 'FG Gold (Canadian)',                     district: 'Bo / Tonkolili',   status: 'Development', lat: 7.93,  lng: -11.93, notes: '5.81 Moz JORC-certified resource; Sierra Leone\'s first large-scale commercial gold mine. First pour targeted 2025.' },
+  { name: 'Nimini Hills Gold',        commodity: 'Gold / Iron',               type: 'gold',     company: 'Various exploration licences',           district: 'Kono / Kenema',    status: 'Exploration', lat: 8.49,  lng: -11.12, notes: 'Greenstone-belt hosted lode gold with iron ore potential; multiple active exploration licences.' },
+  { name: 'Lake Sonfon Gold',         commodity: 'Gold',                      type: 'gold',     company: 'Exploration stage',                      district: 'Koinadugu',        status: 'Exploration', lat: 9.02,  lng: -11.52, notes: 'Identified as a major lode gold area associated with the Lake Sonfon greenstone belt in northern Sierra Leone.' },
+  { name: 'Kalmaro Gold',             commodity: 'Gold',                      type: 'gold',     company: 'Exploration stage',                      district: 'Falaba / Koinadugu', status: 'Exploration', lat: 9.28, lng: -11.22, notes: 'One of the most important known lode gold occurrences in northern Sierra Leone; greenstone-belt setting.' },
+  { name: 'Loko Hills Gold',          commodity: 'Gold',                      type: 'gold',     company: 'Various artisanal / exploration',        district: 'Port Loko',        status: 'Artisanal',   lat: 8.85,  lng: -12.38, notes: 'Alluvial and eluvial gold deposits in the Loko Hills; historically worked by artisanal miners.' },
+  { name: 'Ferensola Gold',           commodity: 'Gold',                      type: 'gold',     company: 'Exploration stage',                      district: 'Tonkolili',        status: 'Exploration', lat: 8.70,  lng: -12.05, notes: 'Gold mineralisation associated with the Marampa schist belt; greenstone-hosted lode potential.' },
+  { name: 'Nimini South Gold',        commodity: 'Gold',                      type: 'gold',     company: 'Exploration stage',                      district: 'Kenema',           status: 'Exploration', lat: 8.37,  lng: -11.18, notes: 'Southern extension of the Nimini greenstone belt; auriferous quartz veins identified.' },
+  // ── Rutile & Heavy Minerals ─────────────────────────────────────────────────
+  { name: 'Sierra Rutile — Area 1',   commodity: 'Rutile, Ilmenite, Zircon', type: 'rutile',   company: 'Iluka Resources (Sierra Rutile Ltd)',    district: 'Bonthe',           status: 'Active',      lat: 7.67,  lng: -12.33, notes: 'World\'s largest natural rutile deposit (Gbangbama area); operating since 1979. Produces rutile, ilmenite and zircon from beach/fluvial sands.' },
+  { name: 'Sierra Rutile — Gangama',  commodity: 'Rutile, Ilmenite, Zircon', type: 'rutile',   company: 'Iluka Resources (Sierra Rutile Ltd)',    district: 'Moyamba',          status: 'Active',      lat: 7.70,  lng: -12.45, notes: 'Gangama deposit — second major operating area in the Iluka/Sierra Rutile portfolio.' },
+  { name: 'Sierra Rutile — Lanti',    commodity: 'Rutile, Ilmenite',         type: 'rutile',   company: 'Iluka Resources (Sierra Rutile Ltd)',    district: 'Bonthe',           status: 'Development', lat: 7.72,  lng: -12.62, notes: 'Lanti deposit identified as a future mining area within the Sierra Rutile licence.' },
+  // ── Bauxite ─────────────────────────────────────────────────────────────────
+  { name: 'Gondama / Mokanji Bauxite', commodity: 'Bauxite',                 type: 'bauxite',  company: 'Sierra Minerals (VIMETCO / ex-SIEROMCO)', district: 'Moyamba',         status: 'Active',      lat: 7.88,  lng: -12.18, notes: '~31 Mt at 46% Al₂O₃; 321 km² mining lease. One of West Africa\'s better-quality bauxite deposits; shipping via Nitti port.' },
+  { name: 'Lunsar Bauxite',           commodity: 'Bauxite',                  type: 'bauxite',  company: 'Historical / exploration',               district: 'Port Loko',        status: 'Inactive',    lat: 8.67,  lng: -12.52, notes: 'Lateritic bauxite overlying the Marampa schist; historically noted but not commercially exploited.' },
+  // ── Chromite ────────────────────────────────────────────────────────────────
+  { name: 'Freetown Complex Chromite', commodity: 'Chromite',               type: 'chromite', company: 'Historical / exploration',               district: 'Western Area',     status: 'Inactive',    lat: 8.45,  lng: -13.20, notes: 'Chromite layers in the Freetown Layered Mafic Complex; historically mined in small quantities. Associated PGM potential.' },
+  { name: 'Hanga Chromite',           commodity: 'Chromite',                 type: 'chromite', company: 'Historical (United African Co.)',         district: 'Kenema',           status: 'Inactive',    lat: 8.10,  lng: -11.08, notes: 'High-quality chromite (38–44% Cr₂O₃); mined 1937–1962. Crystals up to 10 cm. Greenstone-belt hosted.' },
+  // ── Platinum Group Metals ───────────────────────────────────────────────────
+  { name: 'York / Freetown PGMs',     commodity: 'Platinum Group Metals',    type: 'platinum', company: 'Artisanal / historical',                 district: 'Western Area',     status: 'Artisanal',   lat: 8.27,  lng: -13.17, notes: '5,242 oz PGMs recovered by 1949 from streams draining the Freetown Layered Complex (isoferroplatinum, tulameenite, laurite). Artisanal working continues.' },
+  // ── Coltan / Rare Minerals ──────────────────────────────────────────────────
+  { name: 'Kono Coltan',              commodity: 'Coltan (Ta-Nb)',           type: 'coltan',   company: 'Artisanal / small-scale',                district: 'Kono',             status: 'Artisanal',   lat: 8.65,  lng: -10.95, notes: 'Columbite-tantalite (coltan) recovered as a by-product of alluvial diamond workings in the Kono district gravels.' },
+  // ── Lithium ─────────────────────────────────────────────────────────────────
+  { name: 'Gbu-Gbu Lithium',          commodity: 'Lithium (spodumene)',      type: 'lithium',  company: 'Elektros Inc.',                          district: 'Bo',               status: 'Exploration', lat: 7.80,  lng: -11.82, notes: 'Artisanal licence obtained 2025; pegmatite-hosted lithium. 54 Mt stockpiled at surface. Part of the emerging West African lithium belt.' },
+  // ── Limestone / Industrial Minerals ─────────────────────────────────────────
+  { name: 'Yonibana Limestone',       commodity: 'Limestone',               type: 'limestone', company: 'Various / Cement production',            district: 'Tonkolili',        status: 'Active',      lat: 8.22,  lng: -12.02, notes: 'Limestone deposits used for cement and lime production; long-established quarrying operations.' },
+  { name: 'Freetown Limestone',       commodity: 'Limestone',               type: 'limestone', company: 'Various quarrying',                      district: 'Western Area',     status: 'Active',      lat: 8.43,  lng: -13.22, notes: 'Limestone in the Freetown Peninsula used for local construction and cement aggregate.' },
 ];
 
 const MINERAL_COLORS = {
-  iron: '#c0392b', diamond: '#00acc1', gold: '#f39c12', rutile: '#8e44ad', bauxite: '#e67e22',
+  iron:     '#c0392b',
+  diamond:  '#00acc1',
+  gold:     '#f39c12',
+  rutile:   '#8e44ad',
+  bauxite:  '#e67e22',
+  chromite: '#546e7a',
+  platinum: '#78909c',
+  coltan:   '#5d4037',
+  lithium:  '#26c6da',
+  limestone:'#a1887f',
 };
 
-let mineralsLayer = null, mineralsMode = false;
+const MINERAL_TYPE_LABELS = {
+  iron:     'Iron Ore',
+  diamond:  'Diamond',
+  gold:     'Gold',
+  rutile:   'Rutile / Heavy Minerals',
+  bauxite:  'Bauxite',
+  chromite: 'Chromite',
+  platinum: 'Platinum Group Metals',
+  coltan:   'Coltan (Ta-Nb)',
+  lithium:  'Lithium',
+  limestone:'Limestone',
+};
+
+let mineralsLayer = null, mineralsMode = false, mineralsLegendCtrl = null;
+
+function buildMineralsLegend() {
+  if (mineralsLegendCtrl) { mineralsLegendCtrl.remove(); }
+  const usedTypes = [...new Set(MINERAL_DEPOSITS.map(d => d.type))];
+  mineralsLegendCtrl = L.control({ position: 'bottomleft' });
+  mineralsLegendCtrl.onAdd = function() {
+    const div = L.DomUtil.create('div');
+    div.style.cssText = 'background:rgba(255,255,255,0.96);padding:10px 14px;border-radius:8px;font-size:12px;box-shadow:0 2px 10px rgba(0,0,0,0.22);line-height:1.5;max-width:210px;pointer-events:none;';
+    div.innerHTML = '<b style="font-size:13px;display:block;margin-bottom:6px">Mineral Deposits</b>'
+      + usedTypes.map(t =>
+          `<div style="display:flex;align-items:center;gap:7px;margin:3px 0">`
+        + `<span style="display:inline-block;width:13px;height:13px;background:${MINERAL_COLORS[t]||'#888'};border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,0.2);flex-shrink:0"></span>`
+        + `<span>${MINERAL_TYPE_LABELS[t] || t}</span></div>`
+        ).join('');
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  mineralsLegendCtrl.addTo(map);
+}
 
 document.getElementById('minerals-btn').addEventListener('click', () => {
   mineralsMode = !mineralsMode;
@@ -2346,9 +2421,11 @@ document.getElementById('minerals-btn').addEventListener('click', () => {
       mineralsLayer = L.featureGroup(markers);
     }
     mineralsLayer.addTo(map);
+    buildMineralsLegend();
     if (geoLayer) geoLayer.bringToFront();
   } else {
     if (mineralsLayer) mineralsLayer.remove();
+    if (mineralsLegendCtrl) { mineralsLegendCtrl.remove(); mineralsLegendCtrl = null; }
   }
 });
 
