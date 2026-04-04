@@ -375,20 +375,26 @@
       transition: left 0.18s;
     }
     .cmd-row.active   .cmd-pill { background: #2c7a4b; }
-    .layer-order-btns { display:none; align-items:center; gap:3px; margin-right:7px; }
-    .cmd-row.active .layer-order-btns { display:flex; }
-    .lo-btn {
-      background: none; border: 1px solid rgba(44,122,75,0.45); border-radius:3px;
-      color:#2c7a4b; cursor:pointer; font-size:10px; line-height:1; padding:2px 5px;
-      transition: background 0.15s;
+    /* Layer Stack drag-and-drop */
+    #layer-stack-section { display:none; border-bottom:1px solid #dde8e3; padding-bottom:4px; }
+    #layer-stack-list { padding:4px 8px 2px; display:flex; flex-direction:column; gap:3px; }
+    .stack-item {
+      display:flex; align-items:center; gap:8px;
+      padding:5px 10px; border-radius:5px; cursor:grab;
+      background:#f0f7f3; border:1px solid rgba(44,122,75,0.18);
+      font-size:12px; color:#1b5e35; user-select:none;
+      transition: background 0.12s, border-color 0.12s;
     }
-    .lo-btn:hover { background: rgba(44,122,75,0.14); }
-    .lo-btn[disabled] { opacity:0.22; cursor:default; pointer-events:none; }
-    .lo-top-badge {
+    .stack-item:active { cursor:grabbing; }
+    .stack-item.dragging { opacity:0.35; }
+    .stack-item.drag-over { background:#d8f0e4; border-color:#2c7a4b; border-style:dashed; }
+    .stack-handle { font-size:14px; color:#aac; line-height:1; flex-shrink:0; }
+    .stack-name { flex:1; font-weight:500; }
+    .stack-front-badge {
       font-size:9px; font-weight:700; color:#fff; background:#2c7a4b;
-      border-radius:3px; padding:1px 4px; margin-right:5px; white-space:nowrap;
-      flex-shrink:0;
+      border-radius:3px; padding:1px 5px; flex-shrink:0;
     }
+    #layer-stack-hint { font-size:10px; color:#aaa; padding:0 12px 6px; text-align:center; }
     .cmd-row.active   .cmd-pill::after { left: 17px; }
     .cmd-row.loading  .cmd-pill { background: #f5a623; }
     /* Mining sub-category rows (inside panel) */
@@ -674,6 +680,11 @@
   <div id="command-panel">
     <div class="cmd-header">🗺 Map Layers</div>
 
+    <div id="layer-stack-section">
+      <div class="cmd-section-label">Layer Stack</div>
+      <div id="layer-stack-list"></div>
+      <div id="layer-stack-hint">⠿ drag to reorder · top = front</div>
+    </div>
     <div class="cmd-section">
       <div class="cmd-section-label">Base Map</div>
       <select id="basemap-select" style="width:calc(100% - 24px);margin:0 12px 4px;padding:5px 8px;border-radius:6px;border:1px solid #ddd;font-size:12px;background:#fff;cursor:pointer;display:block">
@@ -2683,30 +2694,27 @@ document.getElementById('mineralisation-btn').addEventListener('click', () => {
   document.head.appendChild(s);
 })();
 
-// ─── Layer Order Manager ──────────────────────────────────────────────────────
-// Each entry maps a cmd-row button ID → a function that returns the live Leaflet
-// layer (or null if not yet created). Order in this array is display order only;
-// runtime order is tracked in activeLayerOrder[].
+// ─── Layer Stack — drag-and-drop z-order manager ──────────────────────────────
 const ORDERABLE = [
-  { id: 'chiefdom-btn',       label: 'Chiefdoms',          getLayer: () => geoLayer            },
-  { id: 'ethnicity-btn',      label: 'Ethnicity',          getLayer: () => ethnicityLayer       },
-  { id: 'religion-btn',       label: 'Religion',           getLayer: () => religionLayer        },
-  { id: 'geology-btn',        label: 'Geological Units',   getLayer: () => geoLayer            },
-  { id: 'mineralisation-btn', label: 'Mineralisation',     getLayer: () => mineralisationLayer  },
-  { id: 'parliament-btn',     label: 'Parliament',         getLayer: () => parliamentLayer      },
-  { id: 'wards-btn',          label: 'Wards',              getLayer: () => wardsLayer           },
-  { id: 'mining-btn',         label: 'Mining Concessions', getLayer: () => null                 }, // sub-layers handled separately
-  { id: 'minerals-btn',       label: 'Mineral Deposits',   getLayer: () => mineralsLayer        },
-  { id: 'rivers-btn',         label: 'Rivers',             getLayer: () => riversLayer          },
-  { id: 'roads-btn',          label: 'Roads',              getLayer: () => roadsLayer           },
-  { id: 'popdensity-btn',     label: 'Population',         getLayer: () => popDensityLayer      },
-  { id: 'election2023-btn',   label: 'Election Results',   getLayer: () => election2023Layer    },
+  { id: 'chiefdom-btn',       label: 'Chiefdoms',          getLayer: () => geoLayer           },
+  { id: 'ethnicity-btn',      label: 'Ethnicity',          getLayer: () => ethnicityLayer      },
+  { id: 'religion-btn',       label: 'Religion',           getLayer: () => religionLayer       },
+  { id: 'geology-btn',        label: 'Geological Units',   getLayer: () => geoLayer           },
+  { id: 'mineralisation-btn', label: 'Mineralisation',     getLayer: () => mineralisationLayer },
+  { id: 'parliament-btn',     label: 'Parliament',         getLayer: () => parliamentLayer     },
+  { id: 'wards-btn',          label: 'Wards',              getLayer: () => wardsLayer          },
+  { id: 'mining-btn',         label: 'Mining Concessions', getLayer: () => null               },
+  { id: 'minerals-btn',       label: 'Mineral Deposits',   getLayer: () => mineralsLayer       },
+  { id: 'rivers-btn',         label: 'Rivers',             getLayer: () => riversLayer         },
+  { id: 'roads-btn',          label: 'Roads',              getLayer: () => roadsLayer          },
+  { id: 'popdensity-btn',     label: 'Population',         getLayer: () => popDensityLayer     },
+  { id: 'election2023-btn',   label: 'Election Results',   getLayer: () => election2023Layer   },
 ];
 
-let activeLayerOrder = []; // btn IDs, index 0 = topmost / front
+let activeLayerOrder = []; // btn IDs, index 0 = topmost/front
+let _dragSrcId = null;
 
 function _applyZOrder() {
-  // bringToFront from bottom → top so index-0 ends up on top
   for (let i = activeLayerOrder.length - 1; i >= 0; i--) {
     const cfg = ORDERABLE.find(o => o.id === activeLayerOrder[i]);
     if (!cfg) continue;
@@ -2719,77 +2727,75 @@ function _applyZOrder() {
   }
 }
 
-function _refreshOrderUI() {
-  // Update badge + button disabled state for every registered row
-  for (const cfg of ORDERABLE) {
-    const row = document.getElementById(cfg.id);
-    if (!row) continue;
-    const idx    = activeLayerOrder.indexOf(cfg.id);
-    const atTop  = idx === 0;
-    const active = idx >= 0;
-    // badge
-    let badge = row.querySelector('.lo-top-badge');
-    if (atTop && activeLayerOrder.length > 1) {
-      if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'lo-top-badge';
-        badge.textContent = 'TOP';
-        row.querySelector('.cmd-label').after(badge);
-      }
-    } else {
-      badge?.remove();
+function _buildStackItem(btnId) {
+  const cfg = ORDERABLE.find(o => o.id === btnId);
+  if (!cfg) return null;
+  const el = document.createElement('div');
+  el.className = 'stack-item';
+  el.draggable = true;
+  el.dataset.id = btnId;
+  el.innerHTML = `<span class="stack-handle">⠿</span><span class="stack-name">${cfg.label}</span>`;
+
+  el.addEventListener('dragstart', e => {
+    _dragSrcId = btnId;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => el.classList.add('dragging'), 0);
+  });
+  el.addEventListener('dragend', () => {
+    el.classList.remove('dragging');
+    document.querySelectorAll('.stack-item').forEach(i => i.classList.remove('drag-over'));
+  });
+  el.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.stack-item').forEach(i => i.classList.remove('drag-over'));
+    if (_dragSrcId !== btnId) el.classList.add('drag-over');
+  });
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!_dragSrcId || _dragSrcId === btnId) return;
+    const fromIdx = activeLayerOrder.indexOf(_dragSrcId);
+    const toIdx   = activeLayerOrder.indexOf(btnId);
+    activeLayerOrder.splice(fromIdx, 1);
+    activeLayerOrder.splice(toIdx, 0, _dragSrcId);
+    _dragSrcId = null;
+    _rebuildStack();
+    _applyZOrder();
+  });
+  return el;
+}
+
+function _rebuildStack() {
+  const list    = document.getElementById('layer-stack-list');
+  const section = document.getElementById('layer-stack-section');
+  list.innerHTML = '';
+  activeLayerOrder.forEach((btnId, i) => {
+    const item = _buildStackItem(btnId);
+    if (!item) return;
+    if (i === 0 && activeLayerOrder.length > 1) {
+      const badge = document.createElement('span');
+      badge.className = 'stack-front-badge';
+      badge.textContent = 'FRONT';
+      item.appendChild(badge);
     }
-    // buttons
-    const upBtn  = row.querySelector('.lo-btn.lo-up');
-    const topBtn = row.querySelector('.lo-btn.lo-top');
-    if (!upBtn) continue;
-    upBtn.disabled  = !active || atTop;
-    topBtn.disabled = !active || atTop;
-  }
+    list.appendChild(item);
+  });
+  section.style.display = activeLayerOrder.length > 0 ? 'block' : 'none';
 }
 
-function loMoveUp(btnId) {
-  const i = activeLayerOrder.indexOf(btnId);
-  if (i <= 0) return;
-  [activeLayerOrder[i - 1], activeLayerOrder[i]] = [activeLayerOrder[i], activeLayerOrder[i - 1]];
-  _refreshOrderUI();
-  _applyZOrder();
-}
-
-function loBringToFront(btnId) {
-  if (!activeLayerOrder.includes(btnId)) return;
-  activeLayerOrder = [btnId, ...activeLayerOrder.filter(x => x !== btnId)];
-  _refreshOrderUI();
-  _applyZOrder();
-}
-
-function loLayerOn(btnId)  { if (!activeLayerOrder.includes(btnId)) activeLayerOrder.unshift(btnId); _refreshOrderUI(); _applyZOrder(); }
-function loLayerOff(btnId) { activeLayerOrder = activeLayerOrder.filter(x => x !== btnId); _refreshOrderUI(); }
-
-// Inject ↑ and ⬆ Front buttons into every registered cmd-row
-for (const cfg of ORDERABLE) {
-  const row = document.getElementById(cfg.id);
-  if (!row) continue;
-  const pill = row.querySelector('.cmd-pill');
-  const wrap = document.createElement('span');
-  wrap.className = 'layer-order-btns';
-  wrap.innerHTML =
-    '<button class="lo-btn lo-top" title="Bring to front">⬆ Front</button>' +
-    '<button class="lo-btn lo-up"  title="Move up one">↑</button>';
-  wrap.querySelector('.lo-top').addEventListener('click', e => { e.stopPropagation(); loBringToFront(cfg.id); });
-  wrap.querySelector('.lo-up') .addEventListener('click', e => { e.stopPropagation(); loMoveUp(cfg.id); });
-  row.insertBefore(wrap, pill);
-}
-
-// MutationObserver: hook into existing toggle handlers without modifying them —
-// fires whenever a cmd-row gains or loses the 'active' class.
+// MutationObserver hooks into every existing toggle without touching their code
 const _loObserver = new MutationObserver(mutations => {
   for (const m of mutations) {
     if (m.attributeName !== 'class') continue;
     const row = m.target;
     if (!ORDERABLE.find(o => o.id === row.id)) continue;
-    if (row.classList.contains('active')) loLayerOn(row.id);
-    else loLayerOff(row.id);
+    if (row.classList.contains('active')) {
+      if (!activeLayerOrder.includes(row.id)) activeLayerOrder.unshift(row.id);
+    } else {
+      activeLayerOrder = activeLayerOrder.filter(x => x !== row.id);
+    }
+    _rebuildStack();
+    _applyZOrder();
   }
 });
 for (const cfg of ORDERABLE) {
@@ -2797,11 +2803,7 @@ for (const cfg of ORDERABLE) {
   if (row) _loObserver.observe(row, { attributes: true, attributeFilter: ['class'] });
 }
 
-// ─── Click popup: show top active layer's data first ────────────────────────
-// Patch onClick to prepend a "top layer" info row when a data layer is on top.
-const _origOnClick = onClick;
-// Redefine onClick so the popup includes top-layer context
-// (religion %, ethnic group, geology unit) when a relevant layer leads.
+// ─── Click popup: show top active layer's data first ─────────────────────────
 const _popLayerInfo = (p) => {
   const topId = activeLayerOrder[0];
   if (!topId || topId === 'chiefdom-btn') return '';
