@@ -2397,10 +2397,41 @@ document.getElementById('minerals-btn').addEventListener('click', () => {
         map.createPane('mineralsPane');
         map.getPane('mineralsPane').style.zIndex = 430;
       }
-      const markers = MINERAL_DEPOSITS.map(d => {
+      // De-collide overlapping markers using connected-component grouping
+      // Two deposits are "close" if within THRESHOLD degrees on both axes
+      const JITTER_R = 0.13, THRESHOLD = 0.12;
+      // Build groups via union-find style: each deposit starts in its own group
+      const groupId = MINERAL_DEPOSITS.map((_, i) => i);
+      function root(i) { while (groupId[i] !== i) i = groupId[i]; return i; }
+      for (let i = 0; i < MINERAL_DEPOSITS.length; i++) {
+        for (let j = i + 1; j < MINERAL_DEPOSITS.length; j++) {
+          if (Math.abs(MINERAL_DEPOSITS[i].lat - MINERAL_DEPOSITS[j].lat) < THRESHOLD
+           && Math.abs(MINERAL_DEPOSITS[i].lng - MINERAL_DEPOSITS[j].lng) < THRESHOLD) {
+            const ri = root(i), rj = root(j);
+            if (ri !== rj) groupId[ri] = rj;
+          }
+        }
+      }
+      // Collect members of each group, keyed by root
+      const groups = {};
+      MINERAL_DEPOSITS.forEach((d, i) => {
+        const r = root(i);
+        if (!groups[r]) groups[r] = [];
+        groups[r].push(i);
+      });
+      const jittered = MINERAL_DEPOSITS.map((d, i) => {
+        const r = root(i);
+        const grp = groups[r];
+        if (grp.length === 1) return { ...d };
+        const idx = grp.indexOf(i);
+        const angle = (2 * Math.PI * idx) / grp.length - Math.PI / 2;
+        return { ...d, lat: d.lat + JITTER_R * Math.sin(angle), lng: d.lng + JITTER_R * Math.cos(angle) };
+      });
+
+      const markers = jittered.map(d => {
         const col = MINERAL_COLORS[d.type] || '#888';
         const m   = L.circleMarker([d.lat, d.lng], {
-          pane: 'mineralsPane', radius: 9,
+          pane: 'mineralsPane', radius: 8,
           fillColor: col, color: '#fff', weight: 2, fillOpacity: 0.9,
         });
         m.bindTooltip(d.name, { sticky: true, className: 'chiefdom-tip' });
