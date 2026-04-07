@@ -2132,6 +2132,12 @@ async function loadParliamentData() {
         const slppW     = d ? d.slpp.toFixed(1)  : '—';
         const apcW      = d ? d.apc.toFixed(1)   : '—';
 
+        // Derive seat counts from actual MPs list — always matches the modal
+        const distMPs        = DISTRICT_MPS[name] || [];
+        const slppSeats      = distMPs.filter(m => m.party === 'SLPP').length;
+        const apcSeats       = distMPs.filter(m => m.party === 'APC').length;
+        const totalElected   = distMPs.filter(m => m.party !== 'Paramount Chief').length;
+
         layer.bindTooltip(
           `<strong>${name}</strong>${d ? `<br>${winner} +${margin} pts` : ''}`,
           { sticky: true, className: 'chiefdom-tip' }
@@ -2151,13 +2157,13 @@ async function loadParliamentData() {
               </div>
               <div style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-top:3px"><span>SLPP</span><span>APC</span></div>
             </div>
-            <div class="pop-row"><span>Margin</span><span class="pl" style="color:${winCol}">${winner} +${margin} pts</span></div>
+            <div class="pop-row"><span>Margin</span><span class="pl" style="color:${winCol}">${winner} +${margin} pts</span></div>` : ''}
             <div class="pop-row"><span>Seats won</span><span class="pl">
-              <span style="color:#27ae60;font-weight:700">SLPP ${d.slppSeats}</span>
+              <span style="color:#27ae60;font-weight:700">SLPP ${slppSeats}</span>
               &nbsp;·&nbsp;
-              <span style="color:#c0392b;font-weight:700">APC ${d.apcSeats}</span>
-              <span style="color:#999"> / ${d.total} total</span>
-            </span></div>` : ''}
+              <span style="color:#c0392b;font-weight:700">APC ${apcSeats}</span>
+              <span style="color:#999"> / ${totalElected} total</span>
+            </span></div>
             <div class="pop-row"><span>Population</span><span class="pl">${popFmt} <span style="color:#aaa;font-weight:400;font-size:11px">(2021 census)</span></span></div>
             <div class="pop-row"><span>Chief seat</span><span class="pl">1 (Paramount Chief)</span></div>
             <button class="mp-btn" data-district="${name}">🏛 View Members of Parliament</button>
