@@ -892,7 +892,7 @@
       </div>
     </div>
 
-    <div class="cmd-section">
+    <div class="cmd-section" style="display:none">
       <div class="cmd-section-label">Political</div>
       <div class="cmd-row" id="election2023-btn" title="Toggle 2023 Parliamentary election results by district">
         <span class="cmd-icon">🗳</span><span class="cmd-label">2023 Election Results</span><div class="cmd-pill"></div>
@@ -2102,47 +2102,64 @@ async function loadParliamentData() {
       pane: 'parliamentPane',
       style: feat => {
         const name = feat.properties.shapeName;
-        const prov = DISTRICT_PROVINCE_MAP[name] || 'Northern';
-        const col  = (PROVINCES[prov] || PROVINCES['Northern']).color;
+        const d    = ELECTION_2023[name];
+        const fillColor = d ? electionFillColor(d.slpp, d.apc) : '#cccccc';
+        const winner    = d ? (d.slpp > d.apc ? '#006400' : '#7b0000') : '#888';
         return {
-          color:       col,
-          weight:      3,
-          dashArray:   '10, 6',
-          fillColor:   col,
-          fillOpacity: 0.06,
+          color:       winner,
+          weight:      2,
+          fillColor:   fillColor,
+          fillOpacity: 0.75,
           opacity:     1,
         };
       },
       onEachFeature: (feat, layer) => {
-        const name  = feat.properties.shapeName;
-        const prov  = DISTRICT_PROVINCE_MAP[name] || 'Unknown';
-        const col   = (PROVINCES[prov] || PROVINCES['Northern']).color;
-        const seats = DISTRICT_SEATS_2023[name] || '—';
-        const pop   = DISTRICT_POPULATION[name];
+        const name   = feat.properties.shapeName;
+        const prov   = DISTRICT_PROVINCE_MAP[name] || 'Unknown';
+        const pop    = DISTRICT_POPULATION[name];
         const popFmt = pop ? pop.toLocaleString() : '—';
+        const d      = ELECTION_2023[name];
+        const winner    = d ? (d.slpp > d.apc ? 'SLPP' : 'APC') : '—';
+        const winCol    = d ? (d.slpp > d.apc ? '#006600' : '#c0392b') : '#888';
+        const margin    = d ? Math.abs(d.slpp - d.apc).toFixed(1) : '—';
+        const barSlpp   = d ? Math.round(d.slpp) : 50;
+        const barApc    = d ? Math.round(d.apc)  : 50;
+        const slppW     = d ? d.slpp.toFixed(1)  : '—';
+        const apcW      = d ? d.apc.toFixed(1)   : '—';
 
-        layer.bindTooltip(`<strong>${name}</strong>`, {
-          permanent: false,
-          className: 'chiefdom-tip',
-          direction: 'center',
-        });
+        layer.bindTooltip(
+          `<strong>${name}</strong>${d ? `<br>${winner} +${margin} pts` : ''}`,
+          { sticky: true, className: 'chiefdom-tip' }
+        );
 
         layer.bindPopup(`
-          <div class="pop-header" style="background:linear-gradient(135deg,${col}cc,${col})">
+          <div class="pop-header" style="background:linear-gradient(135deg,${winCol}dd,${winCol})">
             <h3>🏛 ${name} District</h3>
-            <div class="pop-sub">${(PROVINCES[prov]||PROVINCES['Northern']).label}</div>
+            <div class="pop-sub">${(PROVINCES[prov]||PROVINCES['Northern']).label} · ${winner} win · 2023</div>
           </div>
           <div class="pop-body">
+            ${d ? `
+            <div style="margin-bottom:10px">
+              <div style="display:flex;height:18px;border-radius:4px;overflow:hidden;font-size:10px;font-weight:700;color:#fff">
+                <div style="background:#27ae60;width:${barSlpp}%;display:flex;align-items:center;justify-content:center;min-width:22px">${slppW}%</div>
+                <div style="background:#c0392b;flex:1;display:flex;align-items:center;justify-content:center;min-width:22px">${apcW}%</div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-top:3px"><span>SLPP</span><span>APC</span></div>
+            </div>
+            <div class="pop-row"><span>Margin</span><span class="pl" style="color:${winCol}">${winner} +${margin} pts</span></div>
+            <div class="pop-row"><span>Seats won</span><span class="pl">
+              <span style="color:#27ae60;font-weight:700">SLPP ${d.slppSeats}</span>
+              &nbsp;·&nbsp;
+              <span style="color:#c0392b;font-weight:700">APC ${d.apcSeats}</span>
+              <span style="color:#999"> / ${d.total} total</span>
+            </span></div>` : ''}
             <div class="pop-row"><span>Population</span><span class="pl">${popFmt} <span style="color:#aaa;font-weight:400;font-size:11px">(2021 census)</span></span></div>
-            <div class="pop-row"><span>Electoral system</span><span class="pl">Proportional Representation</span></div>
-            <div class="pop-row"><span>Parliament seats</span><span class="pl">${seats}</span></div>
-            <div class="pop-row"><span>Chief seats</span><span class="pl">1 (Paramount Chief)</span></div>
-            <div style="font-size:10px;color:#aaa;margin-top:4px">June 2023 General Election</div>
+            <div class="pop-row"><span>Chief seat</span><span class="pl">1 (Paramount Chief)</span></div>
             <button class="mp-btn" data-district="${name}">🏛 View Members of Parliament</button>
           </div>
-        `, { maxWidth: 280 });
+        `, { maxWidth: 300 });
 
-        layer.on('mouseover', () => layer.setStyle({ weight: 5, fillOpacity: 0.18 }));
+        layer.on('mouseover', () => layer.setStyle({ weight: 3, fillOpacity: 0.92 }));
         layer.on('mouseout',  () => parliamentLayer.resetStyle(layer));
       },
     });
@@ -2182,10 +2199,10 @@ document.getElementById('parliament-btn').addEventListener('click', async () => 
     }
     parliamentLayer.addTo(map);
     if (geoLayer) geoLayer.bringToFront();
-    buildParliamentLegend();
+    buildElectionLegend();
   } else {
     if (parliamentLayer) parliamentLayer.remove();
-    if (parliamentLegendCtrl) { parliamentLegendCtrl.remove(); parliamentLegendCtrl = null; }
+    if (election2023Legend) { election2023Legend.remove(); election2023Legend = null; }
   }
 });
 
@@ -3212,7 +3229,6 @@ const ORDERABLE = [
   { id: 'rivers-btn',         label: 'Rivers',             getLayer: () => riversLayer         },
   { id: 'roads-btn',          label: 'Roads',              getLayer: () => roadsLayer          },
   { id: 'popdensity-btn',     label: 'Population',         getLayer: () => popDensityLayer     },
-  { id: 'election2023-btn',   label: 'Election Results',   getLayer: () => election2023Layer   },
 ];
 
 let activeLayerOrder = []; // btn IDs, index 0 = topmost/front
