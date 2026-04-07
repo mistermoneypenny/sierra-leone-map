@@ -1990,7 +1990,12 @@ function openMPsModal(districtName) {
   const mps = DISTRICT_MPS[districtName] || [];
   const overlay = document.getElementById('mps-modal-overlay');
   document.getElementById('mps-modal-title').textContent = districtName + ' District — Members of Parliament';
-  document.getElementById('mps-modal-subtitle').textContent = mps.length + ' seat' + (mps.length !== 1 ? 's' : '') + ' · 6th Parliament (2023)';
+  const electedCount = mps.filter(m => m.party !== 'Paramount Chief').length;
+  const pcCount      = mps.filter(m => m.party === 'Paramount Chief').length;
+  const subtitleParts = [electedCount + ' elected seat' + (electedCount !== 1 ? 's' : '')];
+  if (pcCount) subtitleParts.push(pcCount + ' Paramount Chief');
+  subtitleParts.push('6th Parliament (2023)');
+  document.getElementById('mps-modal-subtitle').textContent = subtitleParts.join(' · ');
   const body = document.getElementById('mps-modal-body');
   body.innerHTML = mps.map(mp => {
     const ps = PARTY_STYLE[mp.party] || { color: '#555', bg: '#f0f0f0' };
@@ -2026,7 +2031,7 @@ const DISTRICT_PROVINCE_MAP = {
 const DISTRICT_SEATS_2023 = {
   'Bo': 12, 'Bombali': 9, 'Bonthe': 3, 'Falaba': 3,
   'Kailahun': 7, 'Kambia': 6, 'Karene': 5, 'Kenema': 12,
-  'Koinadugu': 4, 'Kono': 6, 'Moyamba': 5, 'Port Loko': 10,
+  'Koinadugu': 4, 'Kono': 6, 'Moyamba': 6, 'Port Loko': 10,
   'Pujehun': 5, 'Tonkolili': 8,
   'Western Area Rural': 5, 'Western Area Urban': 15,
 };
@@ -2872,7 +2877,7 @@ const ELECTION_2023 = {
   'Kono':               { slpp: 54.1, apc: 43.2, slppSeats:  6, apcSeats:  4, total: 10 },
   'Pujehun':            { slpp: 88.9, apc:  9.1, slppSeats:  7, apcSeats:  0, total:  7 },
   'Bonthe':             { slpp: 81.4, apc: 16.2, slppSeats:  5, apcSeats:  0, total:  5 },
-  'Moyamba':            { slpp: 78.6, apc: 19.3, slppSeats:  6, apcSeats:  0, total:  6 },
+  'Moyamba':            { slpp: 78.6, apc: 19.3, slppSeats:  5, apcSeats:  1, total:  6 },
   'Bombali':            { slpp: 20.3, apc: 77.4, slppSeats:  2, apcSeats:  7, total:  9 },
   'Tonkolili':          { slpp: 29.4, apc: 68.1, slppSeats:  3, apcSeats:  6, total:  9 },
   'Port Loko':          { slpp: 23.1, apc: 74.5, slppSeats:  2, apcSeats:  7, total:  9 },
