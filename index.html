@@ -642,9 +642,128 @@
       color: #c0392b;
       display: none;
     }
+  /* ── MPs modal ──────────────────────────────────────────────────────────── */
+  #mps-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 9000;
+    align-items: center;
+    justify-content: center;
+  }
+  #mps-modal-overlay.open { display: flex; }
+  #mps-modal {
+    background: #fff;
+    border-radius: 10px;
+    width: 440px;
+    max-width: 92vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+    overflow: hidden;
+  }
+  #mps-modal-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #e8e8e8;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  #mps-modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0;
+  }
+  #mps-modal-subtitle {
+    font-size: 11px;
+    color: #888;
+    margin: 2px 0 0;
+  }
+  #mps-modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #888;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  #mps-modal-close:hover { color: #333; }
+  #mps-modal-body {
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+  .mp-row {
+    display: flex;
+    align-items: center;
+    padding: 9px 20px;
+    gap: 10px;
+    border-bottom: 1px solid #f2f2f2;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.12s;
+  }
+  .mp-row:last-child { border-bottom: none; }
+  .mp-row:hover { background: #f7f9ff; }
+  .mp-party-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .mp-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1b5e35;
+    text-decoration: none;
+  }
+  .mp-row:hover .mp-name { text-decoration: underline; }
+  .mp-party-label {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .mp-btn {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px 0;
+    background: #1b5e35;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    letter-spacing: 0.03em;
+  }
+  .mp-btn:hover { background: #154d2b; }
   </style>
 </head>
 <body>
+
+<!-- MPs Modal -->
+<div id="mps-modal-overlay">
+  <div id="mps-modal">
+    <div id="mps-modal-header">
+      <div>
+        <p id="mps-modal-title">Members of Parliament</p>
+        <p id="mps-modal-subtitle"></p>
+      </div>
+      <button id="mps-modal-close" title="Close">×</button>
+    </div>
+    <div id="mps-modal-body"></div>
+  </div>
+</div>
 
 <div id="header">
   <div id="header-left">
@@ -1679,6 +1798,218 @@ document.getElementById('cp-submit').addEventListener('click', () => {
   panel.classList.remove('open');
 });
 
+// ─── Members of Parliament by District ────────────────────────────────────────
+// Source: parliament.gov.sl/members-of-parliament.html (6th Parliament, 2023)
+const BASE_URL = 'https://www.parliament.gov.sl/';
+const PARTY_STYLE = {
+  'SLPP':           { color: '#1b5e35', bg: '#e8f5e9' },
+  'APC':            { color: '#b71c1c', bg: '#ffebee' },
+  'Paramount Chief':{ color: '#5d4037', bg: '#efebe9' },
+};
+const DISTRICT_MPS = {
+  'Kailahun': [
+    { name: 'Hon. Emilia Lolloh Tongi',         party: 'SLPP',            url: 'member-detail-Hon.-Emilia-Lolloh-Tongi-1.html' },
+    { name: 'Hon. Ing Fallah Kenawah Tengbeh',  party: 'SLPP',            url: 'member-detail-Hon.--Ing-Fallah-Kenawah-Tengbeh-4.html' },
+    { name: 'Hon. Hindolo Moiwo Gevao',         party: 'SLPP',            url: 'member-detail-Hon.-Hindolo-Moiwo-Gevao-5.html' },
+    { name: 'Hon. Sarty Banya',                 party: 'SLPP',            url: 'member-detail-Hon.Sarty-Banya-6.html' },
+    { name: 'Hon. Hawa Roselyn Siafa',          party: 'SLPP',            url: 'member-detail-Hon.-Hawa-Roselyn-Siafa-7.html' },
+    { name: 'Hon. Mohamed Kanneh',              party: 'SLPP',            url: 'member-detail-Hon.-Mohamed-Kanneh-8.html' },
+    { name: 'Hon. Quintin Salia-Konneh',        party: 'SLPP',            url: 'member-detail-Hon.-Quintin-Salia-Konneh-9.html' },
+    { name: 'Hon. Wuyatta Bernadette Songa',    party: 'SLPP',            url: 'member-detail-Hon.-Wuyatta-Bernadette-Songa-10.html' },
+    { name: 'Hon. Musa Lahai',                  party: 'SLPP',            url: 'member-detail-Hon.-Musa-Lahai-11.html' },
+    { name: 'Hon. P.C. Cyril Foray Gondor II',  party: 'Paramount Chief', url: 'member-detail-Hon.-P.C.-Cyril-Foray-Gondor-II-3.html' },
+    { name: 'Hon. Margaret Feimata Johnson',    party: 'SLPP',            url: 'member-detail-Hon.-Margaret-Feimata-Johnson-156.html' },
+  ],
+  'Kenema': [
+    { name: 'Hon. Abu Bakarr Fofanah',          party: 'SLPP',            url: 'member-detail-Hon.-Abu-Bakarr-Fofanah-14.html' },
+    { name: 'Hon. Momoh Bockarie',              party: 'SLPP',            url: 'member-detail-Hon.-Momoh-Bockarie-15.html' },
+    { name: 'Hon. Rugiatu Tarawalli-Mussaffa',  party: 'SLPP',            url: 'member-detail-Hon.-Rugiatu-Tarawalli-Mussaffa-17.html' },
+    { name: 'Hon. Alice Kornya Sandy',          party: 'SLPP',            url: 'member-detail-Hon.-Alice-Kornya-Sandy-18.html' },
+    { name: 'Hon. Juliana Aliematu Fatorma',    party: 'SLPP',            url: 'member-detail-Hon.-Juliana-Aliematu-Fatorma-19.html' },
+    { name: 'Hon. Brima Mansaray',              party: 'SLPP',            url: 'member-detail-Hon.--Brima-Mansaray-20.html' },
+    { name: 'Hon. Matthew Sahr Nyuma',          party: 'SLPP',            url: 'member-detail-Hon.-Matthew-Sahr-Nyuma-22.html' },
+    { name: 'Hon. Francis Amara Kaisamba',      party: 'SLPP',            url: 'member-detail-Hon.-Francis-Amara-Kaisamba-23.html' },
+    { name: 'PC Alameen Kanneh',                party: 'Paramount Chief', url: 'member-detail-PC-Alameen-Kanneh-13.html' },
+    { name: 'Hon. Boston Munda',                party: 'SLPP',            url: 'member-detail-Hon.-Boston-Munda-152.html' },
+    { name: 'Hon. Alie Bayoh',                  party: 'SLPP',            url: 'member-detail-Hon.-Alie-Bayoh-165.html' },
+  ],
+  'Kono': [
+    { name: 'Hon. Musa Fofanah',                party: 'SLPP',            url: 'member-detail-Hon.-Musa-Fofanah-26.html' },
+    { name: 'Hon. Sia Mahawa Habiama Tommy',    party: 'SLPP',            url: 'member-detail-Hon.-Sia-Mahawa-Habiama-Tommy-27.html' },
+    { name: 'Hon. Komba Quee',                  party: 'SLPP',            url: 'member-detail-Hon.-Komba-Quee-28.html' },
+    { name: 'Hon. Lucinda Fina Kellie',         party: 'APC',             url: 'member-detail-Hon.-Lucinda-Fina-Kellie-29.html' },
+    { name: 'Hon Tamba Kellie',                 party: 'APC',             url: 'member-detail-Hon-Tamba-Kellie-30.html' },
+    { name: 'Hon. Momodu Sahr Koutu',           party: 'SLPP',            url: 'member-detail-Hon.-Momodu-Sahr-Koutu-31.html' },
+    { name: 'Hon. Rebecca Yei Kamara',          party: 'SLPP',            url: 'member-detail-Hon.-Rebecca-Yei-Kamara-32.html' },
+    { name: 'Hon. Saa Emerson Lamina',          party: 'SLPP',            url: 'member-detail-Hon.-Saa-Emerson-Lamina-33.html' },
+    { name: 'Hon. Tamba Simeon Johnny',         party: 'SLPP',            url: 'member-detail-Hon.-Tamba-Simeon-Johnny-24.html' },
+    { name: 'Hon. PC Paul Saquee V',            party: 'Paramount Chief', url: 'member-detail-Hon.-PC-Paul-Saquee-V-25.html' },
+    { name: 'Hon. Tom Issic Tucker',            party: 'APC',             url: 'member-detail-Hon.-Tom-Issic-Tucker-167.html' },
+  ],
+  'Bombali': [
+    { name: 'Hon. John Charles Conteh',         party: 'APC',             url: 'member-detail-Hon.-John-Charles-Conteh-34.html' },
+    { name: 'Hon. Marie Kamara',                party: 'APC',             url: 'member-detail-Hon.-Marie-Kamara-36.html' },
+    { name: 'Hon. Peter Yamba Koroma',          party: 'APC',             url: 'member-detail-Hon.-Peter-Yamba-Koroma-37.html' },
+    { name: 'Hon. Paul Samba Conteh',           party: 'APC',             url: 'member-detail-Hon.-Paul-Samba-Conteh-39.html' },
+    { name: 'Hon. Ibrahim Barrie',              party: 'APC',             url: 'member-detail-Hon.-Ibrahim-Barrie-40.html' },
+    { name: 'Hon. Sallieu Osman Sesay',         party: 'APC',             url: 'member-detail-Hon.-Sallieu-Osman-Sesay-42.html' },
+    { name: 'Hon. PC Kieha Kandeh Baba III',    party: 'Paramount Chief', url: 'member-detail-Hon.-PC-Kieha-Kandeh-Baba-III-35.html' },
+    { name: 'Hon. Mohamed Papa Bangura',        party: 'APC',             url: 'member-detail-Hon.-Mohamed-Papa-Bangura-171.html' },
+    { name: 'Hon. Catherine Zainab Tarawally',  party: 'APC',             url: 'member-detail-Hon.-Catherine-Zainab-Tarawally-173.html' },
+  ],
+  'Falaba': [
+    { name: 'Hon Alpha Fode Madie Jabbie',      party: 'SLPP',            url: 'member-detail-Hon--Alpha-Fode-Madie-Jabbie-46.html' },
+    { name: 'Hon. Mohamed Billoh Shaw',         party: 'SLPP',            url: 'member-detail-Hon.-Mohamed-Billoh-Shaw-45.html' },
+    { name: 'Hon. Mohamed Conteh',              party: 'APC',             url: 'member-detail-Hon.-Mohamed-Conteh-47.html' },
+    { name: 'Hon. Mohamed Alpha Jalloh',        party: 'APC',             url: 'member-detail-Hon.-Mohamed-Alpha-Jalloh-48.html' },
+    { name: 'Hon. PC Thor Thor Sheku Marah III',party: 'Paramount Chief', url: 'member-detail-Hon.-PC-Thor-Thor-Sheku-Marah-III-44.html' },
+  ],
+  'Koinadugu': [
+    { name: 'Hon. Hamidu Holla Mansaray',       party: 'APC',             url: 'member-detail-Hon.-Hamidu-Holla-Mansaray-49.html' },
+    { name: 'Hon. Hawa Conteh',                 party: 'APC',             url: 'member-detail-Hon.-Hawa-Conteh-50.html' },
+    { name: 'Hon. Daniel Brima Koroma',         party: 'APC',             url: 'member-detail-Hon.-Daniel-Brima-Koroma-51.html' },
+    { name: 'Hon. Konkofa Farah Mansaray',      party: 'SLPP',            url: 'member-detail-Hon.-Konkofa-Farah-Mansaray-53.html' },
+    { name: 'Hon. P.C. Alie Balansama Marrah III', party: 'Paramount Chief', url: 'member-detail-Hon.-P.C.-Alie-Balansama-Marrah-III-52.html' },
+  ],
+  'Tonkolili': [
+    { name: 'Hon. Daniel Amadu Bangura',        party: 'APC',             url: 'member-detail-Hon.-Daniel-Amadu-Bangura-54.html' },
+    { name: 'Hon. Aaron Aruna Koroma',          party: 'APC',             url: 'member-detail-Hon.--Aaron-Aruna-Koroma-55.html' },
+    { name: 'Hon. Aruna Papay Solomon Larkoh',  party: 'APC',             url: 'member-detail-Hon.-Aruna-Papay-Solomon-Larkoh-56.html' },
+    { name: 'Hon. Jawah Sesay',                 party: 'APC',             url: 'member-detail-Hon.-Jawah-Sesay-57.html' },
+    { name: 'Hon. Alhaji Sorieba Turay',        party: 'APC',             url: 'member-detail-Hon.-Alhaji-Sorieba-Turay-58.html' },
+    { name: 'Hon. Rugiatu Kamara',              party: 'APC',             url: 'member-detail-Hon.-Rugiatu-Kamara-60.html' },
+    { name: 'Hon. Daniel Fornah',               party: 'APC',             url: 'member-detail-Hon.-Daniel-Fornah-61.html' },
+    { name: 'Hon Mabinty Fornah',               party: 'APC',             url: 'member-detail-Hon-Mabinty-Fornah-62.html' },
+    { name: 'Hon. Rosemarie Bangura',           party: 'APC',             url: 'member-detail-Hon.-Rosemarie-Bangura-63.html' },
+    { name: 'Hon. Foyoh Tholley',               party: 'SLPP',            url: 'member-detail-Hon.--Foyoh-Tholley-64.html' },
+    { name: 'PC Hon. Alhaji Musa Bamba Forray Kulio Jalloh III', party: 'Paramount Chief', url: 'member-detail-PC-Hon.-Alhaji-Musa-Bamba-Forray--Kulio-Jalloh--III-59.html' },
+  ],
+  'Kambia': [
+    { name: 'Hon. Mohamed Sheridan Kamara',     party: 'APC',             url: 'member-detail-Hon.-Mohamed-Sheridan--Kamara-66.html' },
+    { name: 'Hon. Abdul Karim Kamara',          party: 'APC',             url: 'member-detail-Hon.-Abdul-Karim-Kamara-67.html' },
+    { name: 'Hon. Mabinty Alice Taylor-Bangura',party: 'APC',             url: 'member-detail-Hon.-Mabinty-Alice--Taylor-Bangura-68.html' },
+    { name: 'Hon. Mohamed Tarawallie Fofanah',  party: 'SLPP',            url: 'member-detail-Hon.-Mohamed-Tarawallie-Fofanah-69.html' },
+    { name: 'Hon. Adama Bangura',               party: 'SLPP',            url: 'member-detail-Hon.-Adama-Bangura-70.html' },
+    { name: 'Hon. P.C. Bai Farama Tass Bubu Ngbnak IV', party: 'Paramount Chief', url: 'member-detail-Hon.-P.C.-Bai-Farama-Tass-Bubu-Ngbnak-IV-71.html' },
+  ],
+  'Karene': [
+    { name: 'Hon. Mohamed Sheriff Kargbo',      party: 'APC',             url: 'member-detail-Hon.-Mohamed-Sheriff-Kargbo-73.html' },
+    { name: 'Hon. Cecilia Mabinty Bangura',     party: 'APC',             url: 'member-detail-Hon.--Cecilia-Mabinty-Bangura-74.html' },
+    { name: 'Hon. Mohamed Bangura',             party: 'APC',             url: 'member-detail-Hon.-Mohamed-Bangura-75.html' },
+    { name: 'Hon Alusine Bash Kamara',          party: 'APC',             url: 'member-detail-Hon-Alusine-Bash-Kamara-76.html' },
+    { name: 'Hon. Abdul Karim Bangura',         party: 'SLPP',            url: 'member-detail-Hon.-Abdul-Karim-Bangura-72.html' },
+    { name: 'Hon. PC Kandeh Paria Kawalleh II', party: 'Paramount Chief', url: 'member-detail-Hon.-PC-Kandeh-Paria-Kawalleh-II-157.html' },
+  ],
+  'Port Loko': [
+    { name: 'Hon. Aminata Sesay',               party: 'APC',             url: 'member-detail-Hon.-Aminata-Sesay-77.html' },
+    { name: 'Hon. Abdul Karim Kamara',          party: 'APC',             url: 'member-detail-Hon.-Abdul-Karim-Kamara-79.html' },
+    { name: 'Hon. Memunatu Jalloh',             party: 'APC',             url: 'member-detail-Hon.-Memunatu-Jalloh-80.html' },
+    { name: 'Hon. Ibrahim Aziz Bangura',        party: 'APC',             url: 'member-detail-Hon.-Ibrahim-Aziz-Bangura-81.html' },
+    { name: 'Hon. Abdul Latif Sesay',           party: 'APC',             url: 'member-detail-Hon.-Abdul-Latif-Sesay-82.html' },
+    { name: 'Hon. Abdul Kargbo',                party: 'APC',             url: 'member-detail-Hon.-Abdul-Kargbo-83.html' },
+    { name: 'Hon. Ishmael Sankoh Yillah',       party: 'SLPP',            url: 'member-detail-Hon.-Ishmael-Sankoh-Yillah-85.html' },
+    { name: 'Hon. Santigie Ibrahim Kargbo Sheikh', party: 'SLPP',         url: 'member-detail-Hon.-Santigie-Ibrahim-Kargbo-Sheikh-86.html' },
+    { name: 'Hon. Racheal Mariatu Sesay Pessima', party: 'SLPP',          url: 'member-detail-Hon.-Racheal--Mariatu-Sesay-Pessima-164.html' },
+    { name: 'Hon. Abdulai Karim Kanu',          party: 'SLPP',            url: 'member-detail-Hon.-Abdulai-Karim-Kanu-168.html' },
+    { name: 'Hon. P.C. Bai Shebora Sheba Gbereh III', party: 'Paramount Chief', url: 'member-detail-Hon.-P.C.-Bai-Shebora-Sheba-Gbereh-III-78.html' },
+  ],
+  'Bo': [
+    { name: 'Hon. Bashiru Silikie',             party: 'SLPP',            url: 'member-detail-Hon.-Bashiru-Silikie-93.html' },
+    { name: 'Hon. Ing. Habib Fabbah',           party: 'SLPP',            url: 'member-detail-Hon.-Ing.-Habib-Fabbah-88.html' },
+    { name: 'Hon. Osman Abdulai Charles',       party: 'SLPP',            url: 'member-detail-Hon.--Osman-Abdulai-Charles-90.html' },
+    { name: 'Hon. Amie Nyava Moriba',           party: 'SLPP',            url: 'member-detail-Hon.-Amie-Nyava-Moriba-91.html' },
+    { name: 'Hon. Joseph Williams-Lamin',       party: 'SLPP',            url: 'member-detail-Hon.-Joseph-Williams-Lamin-92.html' },
+    { name: 'Hon. Ambrose Maada Lebby',         party: 'SLPP',            url: 'member-detail-Hon.-Ambrose-Maada-Lebby-94.html' },
+    { name: 'Hon. Joseph Abdul Bash-Kamara',    party: 'SLPP',            url: 'member-detail-Hon.-Joseph-Abdul-Bash-Kamara-95.html' },
+    { name: 'Hon. Massay Ngahinteh Aruna',      party: 'SLPP',            url: 'member-detail-Hon.-Massay-Ngahinteh-Aruna-96.html' },
+    { name: 'Hon. Nenneh Lebbie',               party: 'SLPP',            url: 'member-detail-Hon.-Nenneh-Lebbie-97.html' },
+    { name: 'Hon. Yusuf Mackery',               party: 'SLPP',            url: 'member-detail-Hon.-Yusuf-Mackery-98.html' },
+    { name: 'Hon. Christopher Keikura Vandy',   party: 'SLPP',            url: 'member-detail-Hon.-Christopher-Keikura-Vandy-99.html' },
+    { name: 'Hon. Beatrice Maaya Kangbai',      party: 'SLPP',            url: 'member-detail-Hon.-Beatrice-Maaya-Kangbai-158.html' },
+    { name: 'Hon. P.C. Desmond Mahayei Kargobai', party: 'Paramount Chief', url: 'member-detail-Hon.-P.C.-Desmond-Mahayei-Kargobai-89.html' },
+  ],
+  'Bonthe': [
+    { name: 'Hon. Jibrila Sur Moijueh',         party: 'SLPP',            url: 'member-detail-Hon.-Jibrila-Sur-Moijueh-102.html' },
+    { name: 'Hon. Fatmata Bintu Bockarie',      party: 'SLPP',            url: 'member-detail-Hon.--Fatmata-Bintu-Bockarie-103.html' },
+    { name: 'Hon. Alice Jebbeh Kumabeh',        party: 'SLPP',            url: 'member-detail-Hon.-Alice-Jebbeh-Kumabeh-104.html' },
+    { name: 'Hon. Idrissa Moiwai Dauda',        party: 'SLPP',            url: 'member-detail-Hon.-Idrissa-Moiwai-Dauda-159.html' },
+    { name: 'Hon. Moses A. Edwin',              party: 'SLPP',            url: 'member-detail-Hon.-Moses-A.-Edwin-170.html' },
+    { name: 'Hon. P.C. Prince Lansana Bio',     party: 'Paramount Chief', url: 'member-detail-Hon.-P.C.-Prince-Lansana-Bio-101.html' },
+  ],
+  'Moyamba': [
+    { name: 'Hon. Alpha Ben Mansaray',          party: 'APC',             url: 'member-detail-Hon.-Alpha-Ben-Mansaray-105.html' },
+    { name: 'Hon. Veronica Kadie Sesay',        party: 'SLPP',            url: 'member-detail-Hon.-Veronica-Kadie-Sesay-106.html' },
+    { name: 'Hon. Mustapha Musa Sellu',         party: 'SLPP',            url: 'member-detail-Hon.-Mustapha-Musa-Sellu-107.html' },
+    { name: 'Hon. Capt. (RTD) Sylvester Arnold Maxwell Boima', party: 'SLPP', url: 'member-detail-Hon.-Capt.-(RTD)-Sylvester-Arnold-Maxwell-Boima-108.html' },
+    { name: 'Hon. Edward George',               party: 'SLPP',            url: 'member-detail-Hon.-Edward-George-110.html' },
+    { name: 'Hon. Umu Pyne',                    party: 'SLPP',            url: 'member-detail-Hon.-Umu-Pyne-111.html' },
+    { name: 'Hon. P.C. Haja Fatmata Bintu Meama-Kajue Koroma IV', party: 'Paramount Chief', url: 'member-detail-Hon.-P.C.-Haja-Fatmata-Bintu-Meama-Kajue-Koroma--IV-109.html' },
+  ],
+  'Pujehun': [
+    { name: 'Hon. Mariama Munia Zombo',         party: 'SLPP',            url: 'member-detail-Hon.-Mariama-Munia-Zombo-112.html' },
+    { name: 'Hon. Dickson Momoh Rogers',        party: 'SLPP',            url: 'member-detail-Hon.-Dickson-Momoh-Rogers-113.html' },
+    { name: 'Hon. Sidie Mohamed Tunis',         party: 'SLPP',            url: 'member-detail-Hon.-Sidie-Mohamed-Tunis-114.html' },
+    { name: 'Hon. Alex Mattia Rogers',          party: 'SLPP',            url: 'member-detail-Hon.-Alex-Mattia-Rogers-115.html' },
+    { name: 'Hon. Abu Kemokai',                 party: 'SLPP',            url: 'member-detail-Hon.-Abu-Kemokai-124.html' },
+    { name: 'Hon. Musa Shiaka Sama',            party: 'SLPP',            url: 'member-detail-Hon.-Musa-Shiaka-Sama-125.html' },
+    { name: 'Hon. Hawa Kallon',                 party: 'SLPP',            url: 'member-detail-Hon.-Hawa-Kallon-160.html' },
+    { name: 'PC Saffa Moyna Tamu',              party: 'Paramount Chief', url: 'member-detail-PC--Saffa-Moyna-Tamu-116.html' },
+  ],
+  'Western Area Rural': [
+    { name: 'Hon. Kemoko Conteh',               party: 'APC',             url: 'member-detail-Hon.-Kemoko-Conteh-126.html' },
+    { name: 'Hon. John Sartty Kargbo',          party: 'APC',             url: 'member-detail-Hon.-John-Sartty-Kargbo-127.html' },
+    { name: 'Hon. AbuBakarr Fofanah',           party: 'APC',             url: 'member-detail-Hon.-AbuBakarr-Fofanah-128.html' },
+    { name: 'Hon. Osman Wurie Jalloh',          party: 'SLPP',            url: 'member-detail-Hon.-Osman-Wurie-Jalloh-129.html' },
+    { name: 'Hon. Ibrahim Kabba',               party: 'SLPP',            url: 'member-detail-Hon.-Ibrahim-Kabba-130.html' },
+    { name: 'Hon. Amara Momoh Kargbo',          party: 'SLPP',            url: 'member-detail-Hon.-Amara-Momoh-Kargbo-131.html' },
+    { name: 'Hon. Beatrice Iyamide Langley',    party: 'SLPP',            url: 'member-detail-Hon.-Beatrice-Iyamide-Langley-140.html' },
+    { name: 'Hon. Ahmed Joseph Kanu',           party: 'SLPP',            url: 'member-detail-Hon.--Ahmed-Joseph-Kanu-153.html' },
+    { name: 'Hon. Zinabu Bah',                  party: 'APC',             url: 'member-detail-Hon.-Zinabu-Bah-155.html' },
+  ],
+  'Western Area Urban': [
+    { name: 'Hon. Rugiatu Rosy Kanu',           party: 'APC',             url: 'member-detail-Hon.-Rugiatu-Rosy-Kanu-132.html' },
+    { name: 'Hon. Dr. Unpha Sorie Gbassay Koroma', party: 'APC',          url: 'member-detail-Hon.-Dr.-Unpha-Sorie-Gbassay-Koroma-133.html' },
+    { name: 'Hon. Alpha Amadu Bah',             party: 'APC',             url: 'member-detail-Hon.-Alpha-Amadu-Bah-134.html' },
+    { name: 'Hon. Mamoud Kamara',               party: 'APC',             url: 'member-detail-Hon.-Mamoud-Kamara-136.html' },
+    { name: 'Hon. Osman Abdal Timbo',           party: 'APC',             url: 'member-detail-Hon.-Osman-Abdal-Timbo-137.html' },
+    { name: 'Hon. Haja Miatta Amara',           party: 'APC',             url: 'member-detail-Hon.-Haja-Miatta-Amara-138.html' },
+    { name: 'Hon. Fatmata Sarah Soukenak',      party: 'SLPP',            url: 'member-detail-Hon.-Fatmata-Sarah-Soukenak-139.html' },
+    { name: 'Hon. Idriss Sahid Kamara',         party: 'SLPP',            url: 'member-detail-Hon.-Idriss-Sahid-Kamara-141.html' },
+    { name: 'Hon. Princess Kadie Daramy',       party: 'SLPP',            url: 'member-detail-Hon.-Princess-Kadie-Daramy-146.html' },
+    { name: 'Hon. Benjamin Turay',              party: 'SLPP',            url: 'member-detail-Hon.-Benjamin-Turay-147.html' },
+    { name: 'Hon. Abdul Sulaiman Marray-Conteh',party: 'SLPP',            url: 'member-detail-Hon.-Abdul-Sulaiman-Marray-Conteh-149.html' },
+    { name: 'Hon. Mohamed Sheriff Rahman-Coker',party: 'SLPP',            url: 'member-detail-Hon.-Mohamed-Sheriff-Rahman-Coker-150.html' },
+    { name: 'Hon. Mariama Bangura',             party: 'APC',             url: 'member-detail-Hon.-Mariama-Bangura-161.html' },
+    { name: 'Hon. Abdulai Kamara',              party: 'APC',             url: 'member-detail-Hon.-Abdulai-Kamara-162.html' },
+    { name: 'Hon. Adama Conteh',                party: 'APC',             url: 'member-detail-Hon.-Adama-Conteh-163.html' },
+    { name: 'Hon. Alfred Ayodele Thompson',     party: 'APC',             url: 'member-detail-Hon.-Alfred-Ayodele-Thompson-172.html' },
+  ],
+};
+
+function openMPsModal(districtName) {
+  const mps = DISTRICT_MPS[districtName] || [];
+  const overlay = document.getElementById('mps-modal-overlay');
+  document.getElementById('mps-modal-title').textContent = districtName + ' District — Members of Parliament';
+  document.getElementById('mps-modal-subtitle').textContent = mps.length + ' seat' + (mps.length !== 1 ? 's' : '') + ' · 6th Parliament (2023)';
+  const body = document.getElementById('mps-modal-body');
+  body.innerHTML = mps.map(mp => {
+    const ps = PARTY_STYLE[mp.party] || { color: '#555', bg: '#f0f0f0' };
+    return `<a class="mp-row" href="${BASE_URL}${mp.url}" target="_blank" rel="noopener">
+      <div class="mp-party-dot" style="background:${ps.color}"></div>
+      <span class="mp-name">${mp.name}</span>
+      <span class="mp-party-label" style="color:${ps.color};background:${ps.bg}">${mp.party}</span>
+    </a>`;
+  }).join('');
+  overlay.classList.add('open');
+}
+
+document.getElementById('mps-modal-close').addEventListener('click', () => {
+  document.getElementById('mps-modal-overlay').classList.remove('open');
+});
+document.getElementById('mps-modal-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+
 // ─── Parliamentary Constituency (District) Layer ──────────────────────────────
 // Since Sierra Leone's 2023 electoral reform, the 16 districts serve as
 // multi-member proportional representation constituencies.
@@ -1807,6 +2138,7 @@ async function loadParliamentData() {
             <div class="pop-row"><span>Parliament seats</span><span class="pl">${seats}</span></div>
             <div class="pop-row"><span>Chief seats</span><span class="pl">1 (Paramount Chief)</span></div>
             <div style="font-size:10px;color:#aaa;margin-top:4px">June 2023 General Election</div>
+            <button class="mp-btn" data-district="${name}">🏛 View Members of Parliament</button>
           </div>
         `, { maxWidth: 280 });
 
@@ -1819,6 +2151,15 @@ async function loadParliamentData() {
     btn.querySelector('.cmd-label').textContent = 'Parliament';
     btn.querySelector('.cmd-icon').textContent = '🏛';
     btn.classList.remove('loading');
+
+    // Wire up "View MPs" button inside popups
+    map.on('popupopen', (e) => {
+      const btn = e.popup.getElement()?.querySelector('.mp-btn[data-district]');
+      if (btn) {
+        btn.onclick = () => openMPsModal(btn.getAttribute('data-district'));
+      }
+    });
+
     return true;
   } catch (err) {
     console.error('Parliament data load failed:', err);
