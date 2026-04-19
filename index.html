@@ -4,15 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sierra Leone – Paramount Chiefdoms</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #0f2027;
-      color: #eee;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f1520;
+      color: #e8e4dc;
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -21,7 +23,7 @@
 
     /* ─── Header ─── */
     #header {
-      background: linear-gradient(135deg, #1b5e35 0%, #256d45 60%, #2d8a57 100%);
+      background: linear-gradient(135deg, #0f1520 0%, #151c28 80%, #1a2235 100%);
       padding: 10px 20px;
       display: flex;
       align-items: center;
@@ -44,7 +46,7 @@
 
     #header .subtitle {
       font-size: 12px;
-      color: rgba(255,255,255,0.72);
+      color: rgba(201,168,76,0.7);
       margin-top: 2px;
     }
 
@@ -96,13 +98,13 @@
     .sr-item {
       padding: 9px 15px;
       cursor: pointer;
-      border-bottom: 1px solid #f2f2f2;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
       transition: background 0.15s;
     }
     .sr-item:last-child { border-bottom: none; }
-    .sr-item:hover { background: #f5f9f6; }
-    .sr-item strong { font-size: 13px; color: #1b5e35; display: block; }
-    .sr-item span { font-size: 11px; color: #777; }
+    .sr-item:hover { background: rgba(201,168,76,0.06); }
+    .sr-item strong { font-size: 13px; color: #c9a84c; display: block; }
+    .sr-item span { font-size: 11px; color: rgba(255,255,255,0.45); }
 
     /* ─── Map ─── */
     #map-wrap { flex: 1; position: relative; min-height: 0; }
@@ -112,7 +114,7 @@
     #loading {
       position: absolute;
       inset: 0;
-      background: rgba(15, 32, 39, 0.88);
+      background: rgba(10,14,20,0.92);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -124,7 +126,7 @@
     .spinner {
       width: 56px; height: 56px;
       border: 5px solid rgba(255,255,255,0.12);
-      border-top-color: #3dba72;
+      border-top-color: #c9a84c;
       border-radius: 50%;
       animation: spin 0.75s linear infinite;
       margin-bottom: 18px;
@@ -141,7 +143,7 @@
       top: 14px;
       left: 14px;
       z-index: 1000;
-      background: rgba(255,255,255,0.96);
+      background: rgba(15,21,32,0.97);
       border-radius: 10px;
       padding: 13px 16px;
       box-shadow: 0 4px 18px rgba(0,0,0,0.2);
@@ -150,8 +152,8 @@
     #stats h3 {
       font-size: 13px;
       font-weight: 700;
-      color: #1b5e35;
-      border-bottom: 2px solid #e8f5e9;
+      color: #c9a84c;
+      border-bottom: 2px solid rgba(201,168,76,0.12);
       padding-bottom: 6px;
       margin-bottom: 9px;
       text-transform: uppercase;
@@ -163,17 +165,17 @@
       align-items: center;
       margin-bottom: 5px;
       font-size: 13px;
-      color: #555;
+      color: rgba(255,255,255,0.6);
     }
     .stat-row .num {
       font-weight: 700;
       font-size: 16px;
-      color: #1b5e35;
+      color: #c9a84c;
     }
 
     /* ─── Legend ─── */
     .map-legend {
-      background: rgba(255,255,255,0.96);
+      background: rgba(15,21,32,0.97);
       border-radius: 10px;
       padding: 13px 16px;
       box-shadow: 0 4px 18px rgba(0,0,0,0.18);
@@ -183,10 +185,10 @@
     .map-legend h3 {
       font-size: 13px;
       font-weight: 700;
-      color: #1b5e35;
+      color: #c9a84c;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      border-bottom: 2px solid #e8f5e9;
+      border-bottom: 2px solid rgba(201,168,76,0.12);
       padding-bottom: 6px;
       margin-bottom: 9px;
     }
@@ -200,10 +202,10 @@
       border-radius: 5px;
       transition: background 0.15s;
     }
-    .leg-row:hover { background: #f0f7f2; }
+    .leg-row:hover { background: rgba(201,168,76,0.06); }
     .leg-row.dimmed { opacity: 0.4; }
     .mining-type-row { cursor: pointer; border-radius: 4px; padding: 3px 4px; transition: opacity 0.15s, background 0.15s; user-select: none; }
-    .mining-type-row:hover { background: #f0f4ff; }
+    .mining-type-row:hover { background: rgba(201,168,76,0.06); }
     .mining-type-row.dimmed { opacity: 0.35; }
     .map-legend.hidden-legend { display: none; }
     /* Canvas ethnicity layer – mix-blend-mode set inline via JS */
@@ -214,13 +216,13 @@
       border: 1px solid rgba(0,0,0,0.18);
       flex-shrink: 0;
     }
-    .leg-name { color: #444; font-weight: 600; flex: 1; }
-    .leg-count { color: #888; font-size: 11px; }
+    .leg-name { color: rgba(255,255,255,0.75); font-weight: 600; flex: 1; }
+    .leg-count { color: rgba(255,255,255,0.4); font-size: 11px; }
 
     /* ─── Tooltip ─── */
     .chiefdom-tip {
-      background: rgba(27, 94, 53, 0.93) !important;
-      border: 1px solid #3dba72 !important;
+      background: rgba(12,17,26,0.97) !important;
+      border: 1px solid #c9a84c !important;
       color: #fff !important;
       border-radius: 7px !important;
       padding: 6px 11px !important;
@@ -247,8 +249,8 @@
     .leaflet-popup-content { margin: 0 !important; }
     .pop-header {
       padding: 12px 16px 10px;
-      border-bottom: 1px solid #eee;
-      background: linear-gradient(135deg, #1b5e35, #2d8a57);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      background: linear-gradient(135deg, #0f1520, #1e2738);
       color: #fff;
     }
     .pop-header h3 { font-size: 16px; font-weight: 700; }
@@ -259,11 +261,11 @@
       justify-content: space-between;
       gap: 12px;
       font-size: 13px;
-      color: #555;
+      color: rgba(255,255,255,0.6);
       margin-bottom: 6px;
     }
     .pop-row:last-child { margin-bottom: 0; }
-    .pop-row .pl { font-weight: 600; color: #333; }
+    .pop-row .pl { font-weight: 600; color: rgba(255,255,255,0.85); }
     .pop-prov-dot {
       display: inline-block;
       width: 10px; height: 10px;
@@ -272,28 +274,28 @@
       vertical-align: middle;
     }
     .pop-chief-row {
-      background: #f0f7f2;
+      background: rgba(201,168,76,0.06);
       border-radius: 7px;
       padding: 8px 10px;
       margin-bottom: 8px;
-      border-left: 3px solid #2d8a57;
+      border-left: 3px solid #d4b96a;
     }
     .pop-chief-row .chief-label {
       font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: #2d8a57;
+      color: #d4b96a;
       margin-bottom: 3px;
     }
     .pop-chief-row .chief-name {
       font-size: 14px;
       font-weight: 700;
-      color: #1b5e35;
+      color: #c9a84c;
     }
     .pop-chief-row .chief-sub {
       font-size: 11px;
-      color: #777;
+      color: rgba(255,255,255,0.45);
       margin-top: 2px;
     }
 
@@ -305,7 +307,7 @@
       bottom: 14px;
       z-index: 1000;
       width: 220px;
-      background: rgba(255,255,255,0.98);
+      background: rgba(12,17,26,0.99);
       border-radius: 12px;
       box-shadow: 0 4px 24px rgba(0,0,0,0.18);
       overflow-y: auto;
@@ -315,7 +317,7 @@
       flex-direction: column;
     }
     .cmd-header {
-      background: linear-gradient(135deg, #1b5e35, #2c7a4b);
+      background: linear-gradient(135deg, #c9a84c, #c9a84c);
       color: #fff;
       font-size: 11px;
       font-weight: 700;
@@ -332,6 +334,7 @@
     }
     .cmd-section:last-child { border-bottom: none; }
     .cmd-section-label {
+      color: rgba(201,168,76,0.65);
       font-size: 9px;
       font-weight: 700;
       text-transform: uppercase;
@@ -350,16 +353,16 @@
       border-radius: 0;
     }
     .cmd-row:hover { background: #f4f6f4; }
-    .cmd-row.active { background: #f0f7f2; }
+    .cmd-row.active { background: rgba(201,168,76,0.06); }
     .cmd-row.loading { pointer-events: none; opacity: 0.65; }
     .cmd-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
-    .cmd-label { flex: 1; font-size: 13px; font-weight: 600; color: #444; line-height: 1.2; }
-    .cmd-row.active .cmd-label { color: #1b5e35; }
+    .cmd-label { flex: 1; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75); line-height: 1.2; }
+    .cmd-row.active .cmd-label { color: #c9a84c; }
     /* Pill toggle */
     .cmd-pill {
       width: 34px; height: 19px;
       border-radius: 10px;
-      background: #d4d4d4;
+      background: rgba(255,255,255,0.15);
       position: relative;
       flex-shrink: 0;
       transition: background 0.18s;
@@ -374,24 +377,24 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.22);
       transition: left 0.18s;
     }
-    .cmd-row.active   .cmd-pill { background: #2c7a4b; }
+    .cmd-row.active   .cmd-pill { background: #c9a84c; }
     /* Layer Stack drag-and-drop */
     #layer-stack-section { display:none; border-bottom:1px solid #dde8e3; padding-bottom:4px; }
     #layer-stack-list { padding:4px 8px 2px; display:flex; flex-direction:column; gap:3px; }
     .stack-item {
       display:flex; align-items:center; gap:8px;
       padding:5px 10px; border-radius:5px; cursor:grab;
-      background:#f0f7f3; border:1px solid rgba(44,122,75,0.18);
-      font-size:12px; color:#1b5e35; user-select:none;
+      background:rgba(30,39,56,0.8); border:1px solid rgba(201,168,76,0.15);
+      font-size:12px; color:#c9a84c; user-select:none;
       transition: background 0.12s, border-color 0.12s;
     }
     .stack-item:active { cursor:grabbing; }
     .stack-item.dragging { opacity:0.35; }
-    .stack-item.drag-over { background:#d8f0e4; border-color:#2c7a4b; border-style:dashed; }
+    .stack-item.drag-over { background:rgba(201,168,76,0.15); border-color:#c9a84c; border-style:dashed; }
     .stack-handle { font-size:14px; color:#aac; line-height:1; flex-shrink:0; }
     .stack-name { flex:1; font-weight:500; }
     .stack-front-badge {
-      font-size:9px; font-weight:700; color:#fff; background:#2c7a4b;
+      font-size:9px; font-weight:700; color:#fff; background:#c9a84c;
       border-radius:3px; padding:1px 5px; flex-shrink:0;
     }
     #layer-stack-hint { font-size:10px; color:#aaa; padding:0 12px 6px; text-align:center; }
@@ -415,7 +418,7 @@
       transition: opacity 0.14s, background 0.14s;
       user-select: none;
     }
-    .cmd-sub-row:hover { background: #eef4fb; }
+    .cmd-sub-row:hover { background: rgba(201,168,76,0.06); }
     .cmd-sub-row.dimmed { opacity: 0.32; }
     .cmd-sub-swatch {
       width: 11px; height: 11px;
@@ -423,7 +426,7 @@
       flex-shrink: 0;
       border: 1px solid rgba(0,0,0,0.15);
     }
-    .cmd-sub-label { font-size: 11px; color: #555; }
+    .cmd-sub-label { font-size: 11px; color: rgba(255,255,255,0.6); }
     /* Reset filter button */
     #reset-btn {
       display: none;
@@ -443,7 +446,7 @@
 
     /* ─── Plot Concession Button (lives in header) ─── */
     #plot-btn {
-      background: linear-gradient(135deg, #b8860b, #d4a017);
+      background: linear-gradient(135deg, #c9a84c, #d4b96a);
       border: none;
       border-radius: 22px;
       padding: 8px 16px;
@@ -480,7 +483,7 @@
     #concession-panel.open { transform: translateX(0); }
 
     .cp-header {
-      background: linear-gradient(135deg, #b8860b, #d4a017);
+      background: linear-gradient(135deg, #c9a84c, #d4b96a);
       color: #fff;
       padding: 14px 16px;
       display: flex;
@@ -517,7 +520,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: #555;
+      color: rgba(255,255,255,0.6);
       margin-bottom: 5px;
     }
     .cp-field input[type="text"],
@@ -528,7 +531,7 @@
       padding: 8px 10px;
       font-size: 13px;
       font-family: inherit;
-      color: #333;
+      color: rgba(255,255,255,0.85);
       outline: none;
       transition: border-color 0.15s;
       resize: vertical;
@@ -538,7 +541,7 @@
 
     .cp-coords-hint {
       font-size: 11px;
-      color: #888;
+      color: rgba(255,255,255,0.4);
       margin-top: 4px;
       line-height: 1.5;
     }
@@ -556,12 +559,12 @@
       transition: transform 0.12s, border-color 0.12s;
     }
     .cp-color-btn:hover { transform: scale(1.15); }
-    .cp-color-btn.selected { border-color: #333; transform: scale(1.15); }
+    .cp-color-btn.selected { border-color: rgba(255,255,255,0.85); transform: scale(1.15); }
 
     .cp-plot-btn {
       width: 100%;
       padding: 11px;
-      background: linear-gradient(135deg, #b8860b, #d4a017);
+      background: linear-gradient(135deg, #c9a84c, #d4b96a);
       color: #fff;
       border: none;
       border-radius: 8px;
@@ -583,7 +586,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: #888;
+      color: rgba(255,255,255,0.4);
     }
     .concession-item {
       display: flex;
@@ -604,12 +607,12 @@
       flex: 1;
       font-size: 13px;
       font-weight: 600;
-      color: #333;
+      color: rgba(255,255,255,0.85);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .ci-area { font-size: 11px; color: #888; flex-shrink: 0; }
+    .ci-area { font-size: 11px; color: rgba(255,255,255,0.4); flex-shrink: 0; }
     .ci-toggle, .ci-delete {
       background: none;
       border: none;
@@ -680,20 +683,20 @@
   }
   #mps-modal-subtitle {
     font-size: 11px;
-    color: #888;
+    color: rgba(255,255,255,0.4);
     margin: 2px 0 0;
   }
   #mps-modal-close {
     background: none;
     border: none;
     font-size: 20px;
-    color: #888;
+    color: rgba(255,255,255,0.4);
     cursor: pointer;
     line-height: 1;
     padding: 0;
     flex-shrink: 0;
   }
-  #mps-modal-close:hover { color: #333; }
+  #mps-modal-close:hover { color: rgba(255,255,255,0.85); }
   #mps-modal-body {
     overflow-y: auto;
     padding: 8px 0;
@@ -703,7 +706,7 @@
     align-items: center;
     padding: 9px 20px;
     gap: 10px;
-    border-bottom: 1px solid #f2f2f2;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
     text-decoration: none;
     color: inherit;
     transition: background 0.12s;
@@ -720,7 +723,7 @@
     flex: 1;
     font-size: 13px;
     font-weight: 600;
-    color: #1b5e35;
+    color: #c9a84c;
     text-decoration: none;
   }
   .mp-row:hover .mp-name { text-decoration: underline; }
@@ -736,7 +739,7 @@
     width: 100%;
     margin-top: 10px;
     padding: 8px 0;
-    background: #1b5e35;
+    background: #c9a84c;
     color: #fff;
     border: none;
     border-radius: 5px;
@@ -806,7 +809,7 @@
     </div>
     <div class="cmd-section">
       <div class="cmd-section-label">Base Map</div>
-      <select id="basemap-select" style="width:calc(100% - 24px);margin:0 12px 4px;padding:5px 8px;border-radius:6px;border:1px solid #ddd;font-size:12px;background:#fff;cursor:pointer;display:block">
+      <select id="basemap-select" style="background:#151c28;color:#e8e4dc;border:1px solid rgba(201,168,76,0.3);border-radius:6px;padding:4px 8px" style="width:calc(100% - 24px);margin:0 12px 4px;padding:5px 8px;border-radius:6px;border:1px solid #ddd;font-size:12px;background:#fff;cursor:pointer;display:block">
         <option value="Light">Light</option>
         <option value="Google Maps">Google Maps</option>
         <option value="Google Hybrid">Google Hybrid</option>
